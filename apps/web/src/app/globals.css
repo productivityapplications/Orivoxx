@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-app: var(--bg-app);
+  --color-sidebar: var(--bg-sidebar);
+  --color-panel: var(--bg-panel);
+  --color-raised: var(--bg-raised);
+  --color-canvas: var(--bg-canvas);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --bg-app: #0b0d10;
+  --bg-sidebar: #101319;
+  --bg-panel: #151922;
+  --bg-raised: #1b202a;
+  --bg-canvas: #0d1117;
+  --border-subtle: #282f3a;
+  --border-strong: #3a4351;
+  --text-primary: #f2f4f8;
+  --text-secondary: #b0b8c5;
+  --text-muted: #808a99;
+  --accent: #a78bfa;
+  --accent-secondary: #75a7ff;
+  --status-pass: #48c9a4;
+  --status-fail: #ff5d6c;
+  --status-drift: #ff7a86;
+  --status-warning: #f3c66d;
+  --status-progress: #9d8bff;
+  --status-neutral: #8792a2;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family:
+    var(--font-geist-sans),
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
