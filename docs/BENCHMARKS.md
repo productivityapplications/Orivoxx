@@ -18,7 +18,7 @@ This document defines what each bench measures, how it is scored, and what it de
 
 **What it measures:** the fraction of declared requirements that pass their deterministic checks. Requirement types include required/forbidden files, required/forbidden text markers, required/forbidden dependencies, and required static source references.
 
-**How it is scored (design):**
+**How it is scored (shipped):**
 
 - Each requirement has a severity weight (`critical`, `high`, `medium`, `low`).
 - `PASS` earns the requirement's weight; `FAIL` earns zero; `UNVERIFIED` earns zero and is reported separately so it cannot be mistaken for a pass.
@@ -48,7 +48,7 @@ This document defines what each bench measures, how it is scored, and what it de
 
 The existing engine can express several of these as `text_not_contains`, `dependency_absent`, `file_absent`, and `source_reference_exists` checks. Richer data-flow rules are **not** implemented and would require a new rule type.
 
-**How it is scored (design):**
+**How it is scored (shipped):**
 
 - Each security rule is a binary pass/fail with a severity weight.
 - The bench score is the weighted pass rate, normalized to 0–100.
@@ -62,13 +62,13 @@ The existing engine can express several of these as `text_not_contains`, `depend
 - Secrets that do not match the redaction/rule patterns.
 - Supply-chain risk beyond declared dependencies.
 
-**Current state:** the rule types and secret redaction exist. There is no named security ruleset, no vulnerability database, and no data-flow analysis.
+**Current state:** security requirements are declared per task and scored by the deterministic engine. Both shipped tasks include a named security ruleset (shell-execution dependency, environment file, dynamic evaluation). There is no vulnerability database and no data-flow analysis.
 
 ## 3. Maintainability Bench
 
 **Question:** is the produced code structurally understandable?
 
-**What it measures (planned):** graph metrics over the captured repository:
+**What it measures:** graph metrics over the captured repository:
 
 - Module count and file-size distribution.
 - Fan-in/fan-out and coupling.
@@ -76,7 +76,7 @@ The existing engine can express several of these as `text_not_contains`, `depend
 - Orphaned modules.
 - Depth of the import graph.
 
-**How it is scored (design):**
+**How it is scored (shipped):**
 
 - Metrics are computed from the static import graph, not from model judgment.
 - Each metric has a threshold or normalized curve defined in the task's scoring configuration.
@@ -91,7 +91,7 @@ The existing engine can express several of these as `text_not_contains`, `depend
 - Whether the module boundaries match the domain.
 - Runtime performance.
 
-**Current state:** only the graph **contract** exists (`packages/core/src/graph/contracts`). The graph builder, path resolution, cycle detection, and metric computation are planned. Do not claim a maintainability score until those land.
+**Current state:** shipped in `packages/benchmarks` (`scoring/import-graph`, `scoring/structure`). The builder parses JS/TS-family imports statically, resolves relative specifiers inside the captured inventory, and computes cycles, fan-out, orphan ratio, and module count. Tests and mocks are excluded. Only resolvable relative imports create edges; unsupported or alias imports are reported as warnings, never invented.
 
 ## 4. Harness Bench (stretch)
 
@@ -99,7 +99,7 @@ The existing engine can express several of these as `text_not_contains`, `depend
 
 **What it measures:** two or more agent configurations run against the **same task version** and **same ruleset version**, with the model held constant where possible. The comparison isolates the effect of the harness: tool set, retry policy, context management, stopping conditions.
 
-**How it is scored (design):**
+**How it is scored (shipped):**
 
 - Each configuration receives the same deterministic score treatment as the other benches.
 - The bench reports the score delta and per-rule differences between configurations.

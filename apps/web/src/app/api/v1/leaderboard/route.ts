@@ -12,6 +12,7 @@ const querySchema = z.object({
     .regex(/^[a-z][a-z0-9-]{1,63}$/)
     .optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
+  kind: z.enum(["agents", "baselines", "all"]).optional(),
 });
 
 const NO_STORE = {
@@ -24,6 +25,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const parsed = querySchema.safeParse({
     taskId: url.searchParams.get("taskId") ?? undefined,
     limit: url.searchParams.get("limit") ?? undefined,
+    kind: url.searchParams.get("kind") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -31,7 +33,8 @@ export async function GET(request: Request): Promise<NextResponse> {
       {
         error: {
           code: "invalid_query",
-          message: "taskId must be kebab-case and limit must be an integer from 1 to 200.",
+          message:
+            "taskId must be kebab-case, limit must be 1 to 200, and kind must be agents, baselines, or all.",
         },
       },
       { status: 400, headers: NO_STORE },
@@ -46,6 +49,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       store: leaderboard.store,
       degraded: leaderboard.degraded,
       readOnly: leaderboard.readOnly,
+      baselinesOnly: leaderboard.baselinesOnly,
       ...(leaderboard.problem === undefined ? {} : { problem: leaderboard.problem }),
       generatedAt: new Date().toISOString(),
     },

@@ -16,12 +16,18 @@ export const dynamic = "force-dynamic";
 export default async function LeaderboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ task?: string }>;
+  searchParams: Promise<{ task?: string; kind?: string }>;
 }) {
-  const { task } = await searchParams;
+  const { task, kind } = await searchParams;
   const tasks = taskSummaries();
   const activeTask = tasks.some((entry) => entry.id === task) ? task : undefined;
-  const leaderboard = await webLeaderboard({ taskId: activeTask, limit: 100 });
+  const activeKind =
+    kind === "baselines" || kind === "all" ? kind : ("agents" as const);
+  const leaderboard = await webLeaderboard({
+    taskId: activeTask,
+    limit: 100,
+    kind: activeKind,
+  });
   const sample = leaderboard.store === "seed";
 
   return (
@@ -40,7 +46,14 @@ export default async function LeaderboardPage({
               Sample data
             </StatusChip>
           ) : null}
-          {leaderboard.degraded ? (
+          {leaderboard.baselinesOnly ? (
+        <p className="rounded border border-accent/40 bg-accent/5 px-3 py-2 text-xs text-accent">
+          No harness result exists for this scope yet, so recorded baselines are shown. They are
+          labelled Sample and do not represent a model.
+        </p>
+      ) : null}
+
+      {leaderboard.degraded ? (
             <StatusChip tone="degraded" title={leaderboard.problem}>
               Store degraded
             </StatusChip>
@@ -53,6 +66,32 @@ export default async function LeaderboardPage({
           </Link>
         </div>
       </header>
+
+      <nav aria-label="Result kind" className="flex flex-wrap gap-1.5">
+        {(
+          [
+            ["agents", "Agents"],
+            ["all", "All"],
+            ["baselines", "Baselines"],
+          ] as const
+        ).map(([value, label]) => (
+          <Link
+            key={value}
+            href={`/leaderboard?${new URLSearchParams({
+              ...(activeTask === undefined ? {} : { task: activeTask }),
+              kind: value,
+            }).toString()}`}
+            aria-current={activeKind === value ? "page" : undefined}
+            className={`rounded border px-2.5 py-1 text-xs ${
+              activeKind === value
+                ? "border-accent bg-raised text-primary"
+                : "border-border-subtle text-secondary hover:border-border-strong"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
 
       <nav aria-label="Task filter" className="flex flex-wrap gap-1.5">
         <Link
@@ -81,6 +120,13 @@ export default async function LeaderboardPage({
           </Link>
         ))}
       </nav>
+
+      {leaderboard.baselinesOnly ? (
+        <p className="rounded border border-accent/40 bg-accent/5 px-3 py-2 text-xs text-accent">
+          No harness result exists for this scope yet, so recorded baselines are shown. They are
+          labelled Sample and do not represent a model.
+        </p>
+      ) : null}
 
       {leaderboard.degraded ? (
         <p className="rounded border border-unverified/40 bg-unverified/5 px-3 py-2 text-xs text-unverified">

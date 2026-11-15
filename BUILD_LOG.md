@@ -364,3 +364,30 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 
 - Two concurrent fake runs per server instance is a coarse limit; Vercel may run several instances.
 - CSP allows inline scripts (`'unsafe-inline'`) because Next injects inline bootstrapping; a nonce-based policy is future work.
+
+## 2026-11-15 — P9 complete (README, docs, screenshots, quickstart)
+
+**Files**
+
+- `README.md` — rewritten: TOC, true badges, hero, problem, three benches, 8 real screenshots, architecture, quickstart, real-run commands and recorded results, adding a task, adding an adapter, deterministic/sandbox guarantees, retention, API, structure, testing, hackathon, license, acknowledgements.
+- `docs/assets/screens/*.png` — 9 Playwright captures from the production build (home, benchmarks, task, submit, leaderboard, compare, result scorecard, requirement explorer, capped result).
+- `apps/web/src/content/docs.ts` + `/docs` and `/docs/[slug]` — sidebar, breadcrumb, search, 10 sections from Overview to Hackathon note.
+- `apps/web/scripts/screenshots.mjs` — repeatable capture.
+- Docs updates: `ARCHITECTURE.md` status, `BENCHMARKS.md` maintainability shipped, `HACKATHON.md` current shipped/roadmap, `PRIVACY_NOTICE.md` accuracy, `AI_HANDOFF.md`.
+
+**Verification**
+
+- Fresh copy (5.4 MB, no `node_modules`, no `.env.local`, no `.git`): `pnpm install --frozen-lockfile`, `pnpm -r build`, `pnpm -r typecheck`, `pnpm -r test` all pass. Totals: core 217, benchmarks 63, results 53, harness 82 (+12 skipped), web 44 = **459 passing**.
+- Fresh-copy production server with no env: `/`, `/leaderboard`, `/docs`, `/api/v1/health` → 200; leaderboard `store: seed`, 4 rows, `baselinesOnly: true`.
+- Screenshots captured from the Upstash-backed build: 3 harness rows (98.1 / 97.3 / 97.3).
+
+**Decisions**
+
+- Public leaderboard defaults to harness rows; baselines are a separate filter and only appear automatically when no harness row exists, labelled `Sample`.
+- The docs page is static content in TypeScript, not MDX; search is a server-side substring filter, no client index or telemetry.
+- Screenshot capture uses the production build and real store data, never a mock.
+
+**Known issues**
+
+- README deployment URL is added in P11 after the Vercel deploy.
+- `docs/FRONTEND_DESIGN_SPEC.md` remains as historical visual reference; the benchmark UI contract is `docs/FRONTEND_BENCHMARK_SPEC.md`.

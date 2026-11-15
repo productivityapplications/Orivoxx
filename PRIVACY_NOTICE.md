@@ -6,9 +6,9 @@ Orivoxx is a public benchmark for AI software-engineering agents. The benchmark 
 
 ## What is stored
 
-- **Benchmark scorecards:** task/ruleset/adapter/scoring versions, model identity, timestamps, the numeric score, per-rule outcomes, findings, evidence references, structural metrics, and a bounded produced-code diff as text.
+- **Benchmark scorecards:** task/ruleset/adapter/scoring versions, model identity, timestamps, the numeric score, per-requirement outcomes, cap reasons, structural metrics, and a bounded produced-code diff as text.
 - **Repository fingerprint:** a SHA-256 fingerprint of the captured repository, used to tie a score to an artifact.
-- **No full artifacts:** Orivoxx does not store the full produced repository, ZIP bytes, raw agent stdout/stderr, raw prompts, or raw model responses.
+- **No full artifacts:** Orivoxx does not store the full produced repository, ZIP bytes, raw agent stdout/stderr, raw prompts, or raw model responses. The result stores only a bounded run summary (status, exit code, duration).
 - **No user uploads in the scoring engine:** the public fake-adapter path scores a bundled synthetic task. Real adapters are organizer-executed on a local build machine; their scorecards are published to the shared leaderboard store.
 
 The public leaderboard store is Upstash Redis. A checked-in seed file keeps the leaderboard readable if Redis is cold or unavailable.
@@ -17,12 +17,14 @@ The public leaderboard store is Upstash Redis. A checked-in seed file keeps the 
 
 - Scorecard artifacts are retained for **90 days**.
 - Aggregate score, version fields, findings, and the repository fingerprint may be retained longer so historical leaderboard rows remain reproducible.
-- Removal requests can be made to the repository maintainers; a removed row is replaced with a tombstone that preserves the score and version fields but removes the diff.
+- There is no public delete endpoint. Expiry is an organizer operation against the shared store: the result key and its index members are removed together.
 - No full source, archive bytes, secrets, or raw provider responses are retained.
 
 ## Model provider
 
-Optional explanations send a bounded, consented excerpt of the task spec, finding, and validated source references to the configured model provider. The featured configuration is **OpenRouter** through its OpenAI-compatible API. The provider processes requests under its applicable terms and the terms of the underlying model provider. Orivoxx does not claim provider-side zero retention unless that is separately verified.
+Real adapter runs send the task specification and source context to the configured model provider. The featured configuration is **OpenRouter** through its OpenAI-compatible API. The provider processes requests under its applicable terms and the terms of the underlying model provider. Orivoxx does not claim provider-side zero retention unless that is separately verified.
+
+No explanation feature ships in this build. If one is added, it must send only a bounded, consented context and must never change a score or finding.
 
 The score path makes **no model calls**. A provider outage cannot change a score, finding, verdict, or gate. Explanation output never modifies benchmark data.
 
@@ -31,7 +33,7 @@ The score path makes **no model calls**. A provider outage cannot change a score
 Real agents execute inside a disposable Docker sandbox with:
 
 - no platform API keys or leaderboard credentials;
-- a non-root user, read-only root filesystem, and a bounded tmpfs workspace;
+- a non-root user, a read-only root filesystem, a bounded tmpfs `/tmp`, and an ephemeral run workspace (host bind mount, deleted after capture);
 - CPU, memory, PID, and wall-clock limits;
 - no Docker socket and no host filesystem beyond the run workspace;
 - model access only through an allowlisted proxy.

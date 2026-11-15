@@ -12,6 +12,7 @@ const querySchema = z.object({
     .regex(/^[a-z][a-z0-9-]{1,63}$/)
     .optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
+  kind: z.enum(["agents", "baselines", "all"]).optional(),
 });
 
 const HEADERS = {
@@ -25,6 +26,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const parsed = querySchema.safeParse({
     taskId: url.searchParams.get("taskId") ?? undefined,
     limit: url.searchParams.get("limit") ?? undefined,
+    kind: url.searchParams.get("kind") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -47,6 +49,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       store: leaderboard.store,
       degraded: leaderboard.degraded,
       readOnly: leaderboard.readOnly,
+      baselinesOnly: leaderboard.baselinesOnly,
       ...(leaderboard.problem === undefined ? {} : { problem: leaderboard.problem }),
     },
     { headers: HEADERS },

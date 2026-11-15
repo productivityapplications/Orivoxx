@@ -78,6 +78,7 @@ export default async function HomePage() {
           </div>
           <div className="flex items-center gap-2">
             {sample ? <StatusChip tone="degraded">Sample data</StatusChip> : null}
+            {leaderboard.baselinesOnly ? <StatusChip tone="sample">Baselines only</StatusChip> : null}
             <Link href="/leaderboard" className="text-xs text-accent-secondary hover:underline">
               All results
             </Link>

@@ -1,8 +1,8 @@
 # AI_HANDOFF.md — ORIVOXX
 
 - **Updated:** 15 November 2026
-- **Project state:** benchmark platform build in progress (P0 complete; P1–P11 running autonomously).
-- **Current task:** implement the benchmark layer, web surfaces, docs, demo video, and submission pack. Phase 0 pre-flight was the only approval gate.
+- **Project state:** P0–P8 committed; P9 (README, in-app docs, screenshots, quickstart) in progress; P10 video and P11 submission pack pending.
+- **Current task:** finish the documentation pass, then record and assemble the demo, deploy, and run the final audit. Phase 0 pre-flight was the only approval gate.
 - **Provider:** OpenRouter via the OpenAI-compatible API. Nebius is an optional demoted provider behind the same interface, not a primary path.
 
 ## Product
@@ -33,15 +33,20 @@ Real adapter runs execute locally in Docker (python-openrouter, aider-openrouter
 - `apps/web`: Next.js shell and health endpoint.
 - `apps/web/src/server/nebius`: optional legacy smoke adapter (demoted; not featured).
 
-## In progress / planned in this build
+## Shipped in this build
 
-- `packages/benchmarks` with task/ruleset/scoring versions and two tasks.
-- `packages/harness` with fake, python-openrouter, and aider-openrouter adapters.
-- Pure score function and structural metrics.
-- Docker sandbox with quotas and an allowlisted model proxy.
-- Leaderboard store and read APIs.
-- Benchmark UI, `/docs`, README, screenshots, E2E.
-- Narrated demo video.
+- `packages/benchmarks`: task/ruleset/scoring versions, TaskBoard + Linkstash, deterministic score, static structural metrics.
+- `packages/harness`: fake, python-openrouter, aider-openrouter; Docker executor; allowlisted proxy; capture; diff; organizer CLI.
+- `packages/results`: append-only local/Upstash stores, seed fallback, leaderboard ordering.
+- `apps/web`: landing, catalogue, task detail, submit, result explorer, leaderboard, compare, privacy, `/docs`, read APIs, fake run endpoint, rate limiting, origin checks.
+- `docs/`: architecture, benchmarks, sandbox, adapters, retention, UI spec, task template, hackathon.
+- Recorded real runs: python 97.3, aider 97.3 (same model), python 98.1 (second model).
+- README, screenshots, fresh-clone quickstart.
+
+## Remaining
+
+- P10: narrated demo video (`demo/`).
+- P11: Playwright E2E for submit → run → score → leaderboard, Vercel deployment, final audit, submission draft.
 
 ## Must-preserve invariants
 

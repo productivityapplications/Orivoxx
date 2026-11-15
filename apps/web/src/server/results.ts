@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  clampLimit,
   createResultStore,
   readLeaderboard,
   readResult,
@@ -22,12 +23,16 @@ import { getServerEnv } from "./env";
  * store is configured, the bundled seed rows are the leaderboard rather than an
  * empty page.
  */
+export type LeaderboardKind = "agents" | "baselines" | "all";
+
 export interface WebLeaderboard {
   entries: LeaderboardEntry[];
   store: ResultStoreKind;
   /** True when the shared store failed and the seed answered instead. */
   degraded: boolean;
   readOnly: boolean;
+  /** True when an agents-only read had no harness rows and showed baselines. */
+  baselinesOnly: boolean;
   problem?: string;
 }
 
@@ -103,12 +108,45 @@ async function stores(): Promise<StoreBundle> {
   return { primary: bundle.store, primaryKind: bundle.kind, seed };
 }
 
+function selectKind(
+  entries: LeaderboardEntry[],
+  kind: LeaderboardKind,
+  limit: number | undefined,
+): { entries: LeaderboardEntry[]; baselinesOnly: boolean } {
+  const cap = clampLimit(limit);
+
+  if (kind === "baselines") {
+    return {
+      entries: entries.filter((entry) => entry.adapter.kind === "baseline").slice(0, cap),
+      baselinesOnly: false,
+    };
+  }
+
+  if (kind === "all") {
+    return { entries: entries.slice(0, cap), baselinesOnly: false };
+  }
+
+  const agents = entries.filter((entry) => entry.adapter.kind !== "baseline");
+
+  if (agents.length > 0) {
+    return { entries: agents.slice(0, cap), baselinesOnly: false };
+  }
+
+  // No harness result exists yet: show the recorded baselines, labelled.
+  return {
+    entries: entries.filter((entry) => entry.adapter.kind === "baseline").slice(0, cap),
+    baselinesOnly: entries.length > 0,
+  };
+}
+
 export async function webLeaderboard(
-  options: { taskId?: string; limit?: number } = {},
+  options: { taskId?: string; limit?: number; kind?: LeaderboardKind } = {},
 ): Promise<WebLeaderboard> {
   const { primary, seed } = await stores();
   const readOnly = primary.kind === "seed";
-  const query = { limit: options.limit };
+  const kind = options.kind ?? "agents";
+  // Read enough rows that an agents-only filter still fills the requested page.
+  const query = { limit: kind === "agents" ? 200 : options.limit };
 
   // No shared store and not a local run directory: serve the bundled rows.
   if (!readOnly && primary.kind === "local" && isDeploymentWithoutStore()) {
@@ -116,18 +154,28 @@ export async function webLeaderboard(
       options.taskId === undefined
         ? await seed.list(query)
         : await seed.listByTask(options.taskId, query);
+    const selected = selectKind(entries, kind, options.limit);
 
-    return { entries, store: "seed", degraded: false, readOnly: true };
+    return {
+      entries: selected.entries,
+      store: "seed",
+      degraded: false,
+      readOnly: true,
+      baselinesOnly: selected.baselinesOnly,
+    };
   }
 
   const read = await readLeaderboard({ primary, fallback: seed, query, taskId: options.taskId });
 
   if (read.degraded) {
+    const selected = selectKind(read.entries, kind, options.limit);
+
     return {
-      entries: read.entries,
+      entries: selected.entries,
       store: read.source,
       degraded: true,
       readOnly: true,
+      baselinesOnly: selected.baselinesOnly,
       problem: read.problem ?? "store_unavailable",
     };
   }
@@ -141,15 +189,26 @@ export async function webLeaderboard(
         : await seed.listByTask(options.taskId, query);
 
     if (entries.length > 0) {
-      return { entries, store: "seed", degraded: false, readOnly: true };
+      const selected = selectKind(entries, kind, options.limit);
+
+      return {
+        entries: selected.entries,
+        store: "seed",
+        degraded: false,
+        readOnly: true,
+        baselinesOnly: selected.baselinesOnly,
+      };
     }
   }
 
+  const selected = selectKind(read.entries, kind, options.limit);
+
   return {
-    entries: read.entries,
+    entries: selected.entries,
     store: read.source,
     degraded: false,
     readOnly: read.source === "seed",
+    baselinesOnly: selected.baselinesOnly,
   };
 }
 

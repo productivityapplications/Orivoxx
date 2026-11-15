@@ -52,7 +52,8 @@ What this means in practice:
 
 - The scoring **rubric** exists: versioned tasks, deterministic checks, evidence, verdicts, and a numeric score.
 - The **execution path** exists for organizer-run benchmarks: `packages/harness` runs an adapter in Docker, captures the repository, scores it, and builds an immutable result.
-- The **results layer** exists: append-only local and Upstash stores with a shared `ResultStore` interface, a bundled seed fallback, and read APIs. The public run submission, result explorer, and leaderboard pages are still to be built.
+- The **results layer** exists: append-only local and Upstash stores with a shared `ResultStore` interface, a bundled seed fallback, and read APIs.
+- The **public product** exists: landing, task catalogue and detail, fake self-serve submission, result explorer, leaderboard, comparison, privacy, and in-app docs.
 - The Nebius adapter is demoted to an optional provider; OpenRouter is the featured provider. Neither is in the score path.
 
 ## 2. Target system
@@ -104,7 +105,7 @@ What this means in practice:
 | `packages/harness` | Agent adapter interface, run lifecycle, Docker sandbox, allowlisted model proxy, artifact capture, adapter versioning. | `[SHIPPED]` |
 | `packages/results` | Append-only result storage, leaderboard ordering, Upstash and local stores, seed fallback. | `[SHIPPED]` |
 | `apps/runner` | Optional isolated execution service. | `[SUPERSEDED]` — real runs execute through `packages/harness` on the organizer machine |
-| `apps/web` | Public benchmark UI, run submission, result explorer, leaderboard, explanation requests. | `[PARTIAL]` — read APIs shipped; pages are P7 |
+| `apps/web` | Public benchmark UI, task catalogue, fake run submission, result explorer, leaderboard, comparison, in-app docs. | `[SHIPPED]` — optional explanations are not shipped |
 | `packages/core` | Deterministic scoring rubric over the captured repository. | `[SHIPPED]` — engine only |
 
 ## 3. Execution flow

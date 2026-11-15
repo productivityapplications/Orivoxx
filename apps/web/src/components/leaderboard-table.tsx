@@ -92,7 +92,7 @@ export function LeaderboardTable({
                 </td>
               ) : null}
               <td className="px-3 py-2.5">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col items-start gap-1">
                   <span className="text-secondary">{row.adapter.label}</span>
                   <StatusChip tone={adapterKindTone(row.adapter.kind)}>
                     {adapterKindLabel(row.adapter.kind)}
