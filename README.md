@@ -17,6 +17,7 @@ Every point traces to a named rule and evidence. **No model is in the score path
 
 - [Why this exists](#why-this-exists)
 - [What it measures](#what-it-measures)
+- [Demo video](#demo-video)
 - [Screenshots](#screenshots)
 - [Architecture](#architecture)
 - [Quickstart](#quickstart)
@@ -57,6 +58,14 @@ Two harnesses on one model can score differently. That difference is the product
 Scoring is severity-weighted: critical 8, high 4, medium 2, low 1. `PASS` earns full weight; `FAIL` and `DRIFT` earn zero; `UNVERIFIED` earns zero but is reported separately. A critical spec failure caps the overall score at **59.9**; a critical security failure caps it at **49.9**. Caps are stored and shown in the UI, never hidden.
 
 Published detail: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+
+## Demo video
+
+[`demo/orivoxx-demo.mp4`](demo/orivoxx-demo.mp4) — 2:38, 1920 × 1080, H.264/AAC, narrated and captioned. Every visual is a real screen recording of this build: landing, versioned task, leaderboard, a 97.3 result with requirement evidence, compare, and a self-serve fake run that lands on a capped 59.9 result.
+
+Pipeline and checks: [`demo/README.md`](demo/README.md) · script: [`demo/SCRIPT.md`](demo/SCRIPT.md).
+
+> Narration provider note: ElevenLabs was attempted first; the configured library voice requires a paid plan and the remaining free character quota covered only three scenes. The shipped cut uses a local Piper voice for consistency. Recorded in `BUILD_LOG.md`.
 
 ## Screenshots
 

@@ -17,7 +17,9 @@ type State =
 
 export function SubmitForm({ tasks }: { tasks: SubmitTask[] }) {
   const router = useRouter();
-  const [taskId, setTaskId] = useState(tasks[0]?.id ?? "taskboard");
+  const [taskId, setTaskId] = useState(
+    tasks.find((task) => task.id === "taskboard")?.id ?? tasks[0]?.id ?? "taskboard",
+  );
   const [variant, setVariant] = useState<"compliant" | "regressed">("compliant");
   const [state, setState] = useState<State>({ kind: "idle" });
 

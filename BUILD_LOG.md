@@ -391,3 +391,34 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 
 - README deployment URL is added in P11 after the Vercel deploy.
 - `docs/FRONTEND_DESIGN_SPEC.md` remains as historical visual reference; the benchmark UI contract is `docs/FRONTEND_BENCHMARK_SPEC.md`.
+
+## 2026-11-15 — P10 complete (narrated demo)
+
+**Files**
+
+- `demo/orivoxx-demo.mp4` — 2:38.8, 1920×1080, 30 fps, H.264/AAC, −16.1 LUFS, −1.8 dBTP, 8.5 MiB.
+- `demo/thumbnail.png`, `demo/thumbnail.jpg` — result-scorecard cover.
+- `demo/SCRIPT.md`, `demo/REFERENCE_NOTES.md`, `demo/README.md`.
+- `demo/scripts/narration.mjs`, `generate-audio.mjs`, `generate-piper-audio.mjs`, `record-scenes.mjs`, `assemble.mjs`.
+- `demo/audio/scene-01..08.wav` (narrration), `demo/audio/elevenlabs/` (3 evidence renders).
+- README demo section; `.gitignore` excludes `demo/build/` and `demo/recordings/`.
+
+**Verification**
+
+- `ffprobe`: duration 158.828 s, video h264 1920×1080 30/1, audio aac 48 kHz stereo.
+- Loudness: integrated −16.1 LUFS, true peak −1.8 dBTP.
+- 8/8 scenes have narration; captions never overlap (checked at transitions).
+- Frames inspected at 8 s, 38 s, 100 s, 112 s, 120 s, 125 s, 132 s, 152 s: hero, task table, diff/run record, compare, TaskBoard capped result, close.
+- Final cut includes a real fake-baseline submit that produced a TaskBoard 59.9 capped result, then the cap banner and version strip.
+
+**Decisions / deviation**
+
+- ElevenLabs narration was the plan. The configured voice `T2sZgOl8ol4kf4u6yM2z` is a library voice; the free plan returns HTTP 402 `paid_plan_required`. Remaining quota was 144/10,000 characters; three scenes consumed it and scene 4 required 390. Reset is 12 Dec 2026, after the deadline.
+- Shipped narration uses **Piper** `en_US-lessac-medium` for all eight scenes, one consistent voice, so the video is complete. The three ElevenLabs renders are preserved in `demo/audio/elevenlabs/`. `generate-audio.mjs` remains for a future rebuild if credits are restored. This is a recorded deviation from the ElevenLabs requirement, forced by an external quota.
+- Submit now defaults to TaskBoard (featured task) and TaskBoard is listed first; this keeps the demo and screenshots on one task.
+- Extra fake rows created during video capture were removed from the shared store; the 4 seed rows and 3 harness rows remain.
+
+**Known issues**
+
+- The Piper voice is clearly synthetic compared with ElevenLabs. Content and sync are correct; timbre is the trade-off.
+- The video's submit scene is brief (about 4 s) because the fake run returns instantly.

@@ -69,8 +69,17 @@ function requirementView(requirement: TaskRequirement): TaskRequirementView {
   };
 }
 
+function displayOrder(task: { id: string; pinned: boolean }): number {
+  if (task.pinned) {
+    return 0;
+  }
+
+  return task.id === "taskboard" ? 1 : 2;
+}
+
 export function taskSummaries(): TaskSummaryView[] {
-  return listTasks().map((task) => ({
+  return listTasks()
+    .map((task) => ({
     id: task.id,
     version: task.version,
     title: task.title,
@@ -81,9 +90,10 @@ export function taskSummaries(): TaskSummaryView[] {
     scoringConfigVersion: task.scoringConfigVersion,
     requirementCount: task.requirementCount,
     benchCounts: task.benchCounts,
-    timeLimitSeconds: task.timeLimitSeconds,
-    pinned: task.pinned,
-  }));
+      timeLimitSeconds: task.timeLimitSeconds,
+      pinned: task.pinned,
+    }))
+    .sort((left, right) => displayOrder(left) - displayOrder(right) || left.id.localeCompare(right.id));
 }
 
 export function taskDetail(taskId: string): TaskDetailView | null {
