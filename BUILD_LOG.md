@@ -75,3 +75,35 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 **Known issues**
 
 - `packages/core` build currently emits `.js/.d.ts/.map` into `src` when run without a clean; stray files were deleted. Root cause is the `prebuild` chain invoking `tsc` with a `rootDir` that resolves oddly under `pnpm -r`; tracked for P3 when the package build graph is revisited.
+
+## 2026-11-15 — P2 complete (`packages/harness`)
+
+**Changed files**
+
+- `packages/harness/` new workspace package with build/typecheck/lint/vitest config.
+- `src/contracts.ts` — `AdapterRunInput`, `AgentCommand`, `AdapterRunOutput`, `CapturedFile`, artifact stats, `AgentAdapter`, `AgentExecutor`, hard limits, and the sandbox env allowlist. Command env rejects unknown names, provider-shaped secrets, and non-sentinel API keys.
+- `src/capture.ts` — bounded recursive artifact capture: path validation, exclusion denylist, symlink rejection, per-file/aggregate/file-count ceilings, UTF-8 and binary checks, secret redaction, deterministic repository fingerprint, conversion back to `NormalizedFile` for static scoring.
+- `src/workspace.ts` — run workspace creation, empty-directory precondition, safe starting-file/produced-file writes with containment checks, guarded cleanup.
+- `src/run.ts` — `runAdapter()` orchestration and `buildAdapterRunInput()` from a versioned task; bounded/redacted stdout/stderr summaries; status derivation; output schema validation.
+- `src/adapters/fake.ts` — baseline adapter that materializes a compliant or regressed task fixture without a model.
+- `src/adapters/registry.ts` — adapter lookup and summaries (only `fake` until P6).
+- Tests: 32 across contract validation, capture bounds/symlinks/redaction/fingerprint, fake run, argv-only process execution, timeout/failure status, workspace preconditions, registry, cleanup safety.
+
+**Verification**
+
+- `pnpm --filter @orivoxx/harness test` → 3 files, 32 tests passed.
+- `pnpm --filter @orivoxx/harness typecheck` → exit 0.
+- `pnpm --filter @orivoxx/harness lint` → exit 0.
+- `pnpm --filter @orivoxx/harness build` → exit 0.
+
+**Decisions**
+
+- Capture rejects (does not truncate) aggregate and file-count overruns. Truncation would silently change the score; a bounded failure is the defensible behavior.
+- A single oversized file or binary file is excluded with a warning, matching core archive-intake behavior; the run still captures the rest of the repository.
+- Symlinks anywhere in the captured tree fail capture. The walk prunes excluded directories first, so dependency trees are never traversed.
+- `OPENAI_API_KEY` / `AIDER_OPENAI_API_KEY` inside the sandbox may only hold the `orivoxx-sandbox-proxy` sentinel; the real provider key never enters a container. This lets Aider-style harnesses start while the allowlisted proxy injects the real credential host-side.
+- Fake adapter output is explicitly a baseline: model is `null` and the label names the fixture variant, so the leaderboard can never mistake it for an agent result.
+
+**Known issues**
+
+- Process adapters still need the P4 Docker executor. Until then only `fake` is runnable end to end.
