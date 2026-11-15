@@ -1,3 +1,5 @@
+> **[DEPRECATED — see `docs/HACKATHON.md`]** These notes describe the earlier Nebius x NVIDIA Global AI Hackathon and its 30 October 2026 deadline. The current event is the HackCulture AI Global Hackathon.
+
 # Hackathon source notes (verified 20 October 2026)
 
 1. Official rules: https://nebiusglobalaihackathon.devpost.com/rules

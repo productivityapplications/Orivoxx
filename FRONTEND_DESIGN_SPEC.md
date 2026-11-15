@@ -1,3 +1,5 @@
+> **Positioning update (15 November 2026):** This spec describes the verifier-era dark, map-first dashboard. The current web app is a landing shell plus a health endpoint; none of the workspace UI below is implemented. The spec remains a visual reference for the planned benchmark result explorer. It does not yet define a task catalogue or leaderboard.
+
 # ORIVOXX — FRONTEND DESIGN SPECIFICATION
 
 **Version:** 1.0 · **Status:** Approved design direction for hackathon MVP · **Updated:** 20 October 2026

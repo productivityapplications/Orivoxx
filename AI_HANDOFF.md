@@ -1,69 +1,102 @@
 # AI_HANDOFF.md — ORIVOXX
 
-**Updated:** 20 October 2026  
-**Project state:** Pre-implementation; hackathon blueprint and map-first dark frontend design revised on 20 October 2026  
-**Current task:** Phase 0 only
+- **Updated:** 15 November 2026
+- **Project state:** deterministic verification engine shipped; web app is a shell; documentation repositioned for the HackCulture AI Global Hackathon; benchmark layer not started.
+- **Current task:** documentation pass complete, awaiting human review. Do not start benchmark-layer code until the docs are approved.
 
 ## Product
 
-Orivoxx verifies whether AI-built software follows its project specification and teaches the developer to understand the code and findings. Hackathon tagline: **Verify what AI builds. Understand why it matters.**
+Orivoxx is a benchmarking platform for AI software-engineering agents. Given a versioned `PROJECT_SPEC.md`, it is designed to run any agent (Claude Code, Codex CLI, OpenClaw, custom) through a model-agnostic harness in a sandbox, capture the produced repository, and score it deterministically on spec conformance, security patterns, and structural maintainability.
 
-## Hackathon constraints
+The existing deterministic verification engine is the **scoring rubric**. The product is a benchmark platform; "verifier" refers only to the rule-engine component.
 
-- Track: **Best Apps and Agents**.
-- Required runtime use: Nebius Token Factory or Nebius AI Cloud. The designed app makes a real Token Factory runtime API call.
-- NVIDIA model: `nvidia/Nemotron-3.5-Super-VL` through Token Factory.
-- Submission deadline: Friday, 30 October 2026 at 6:00 p.m. Nigeria time. Recheck official page immediately before submission.
-- Needs working demo URL, public repo with visible open-source license, README, and public YouTube video under three minutes. Need explain model/provider use and provide requested tool feedback.
-- Official rules: https://nebiusglobalaihackathon.devpost.com/rules
+Tagline: **Benchmark the agent, not just the model.**
 
-## Fixed architecture
+## What exists in the repository
 
-Hosted-first Next.js 16.x App Router + TypeScript + Tailwind on Vercel; dark-only Linear-inspired UI; map-first `/workspace` using `@xyflow/react` + `@dagrejs/dagre`; static JS/TS import graph parsing in shared pure TypeScript core; Zod; safe in-memory ZIP parsing; deterministic checks; Nemotron semantic assessment/teaching via the Token Factory OpenAI-compatible API; Upstash Redis REST shared rate limits; Vitest/Playwright. No app DB and no source persistence. The user can try the bundled synthetic TaskBoard sample or upload a bounded ZIP containing `PROJECT_SPEC.md`.
+- `packages/core/src/contracts` — Zod contracts for requirements, evidence, findings, reports, assessments, explanations, and the graph.
+- `packages/core/src/spec-parser` — parses documented `PROJECT_SPEC.md` requirement blocks and seven check types.
+- `packages/core/src/checks` — deterministic rule engine: `file_exists`, `file_absent`, `text_contains`, `text_not_contains`, `dependency_present`, `dependency_absent`, `source_reference_exists`.
+- `packages/core/src/archive` — bounded in-memory ZIP intake, path validation, denylist filtering, secret redaction.
+- `packages/core/src/inventory` — file metadata and language summary.
+- `packages/core/src/evidence` — server-generated evidence registry.
+- `packages/core/src/verdict` — deterministic precedence and severity-aware gate.
+- `packages/core/src/report` — schema-validated report builder (graph is currently empty).
+- `packages/core/src/verify-input` — verify-request validation with upload-consent refinement.
+- `packages/core/src/graph/contracts` — graph schema only; no builder.
+- `packages/core/src/fixtures` — TaskBoard regressed/compliant snapshots and expected deterministic outcomes.
+- `apps/web` — Next.js shell with a dark landing placeholder and `GET /api/v1/health`.
+- `apps/web/src/server/nebius` — server-only `pingModel()` smoke adapter; not a semantic verifier or explanation service.
+- `apps/web/scripts/smoke-test.ts` — manual real-provider smoke script (`pnpm smoke`).
 
-The hosted app MUST NOT execute uploaded project files, shell commands, package install scripts, builds, or tests. It processes source in memory, filters/redacts secrets, and does not log source. Source goes to the AI provider only after explicit consent. State that provider terms govern provider processing; do not promise zero provider retention without confirmation.
+## What does not exist
+
+- Benchmark task registry, task versioning, scoring configuration.
+- Agent adapters, harness, sandbox runner, artifact capture.
+- Numeric benchmark score, leaderboard, leaderboard store, result explorer.
+- Second benchmark rule type beyond the seven deterministic checks.
+- Graph builder, graph metrics, cycle detection.
+- `/workspace`, `/privacy`, upload UI/API, `/api/v1/verify`, `/api/v1/explanations/*`.
+- Semantic verification and explanation runtime (schemas exist only).
+- Upstash rate limiting (env vars exist, code does not).
+- Playwright suite, LICENSE file.
+- Deployed demo or recorded video.
+
+## Source of truth
+
+Current product and architecture:
+
+- `docs/VISION.md` — problem, insight, positioning, out-of-scope list.
+- `docs/ARCHITECTURE.md` — target architecture, shipped-vs-planned components, execution flow, security boundary.
+- `docs/BENCHMARKS.md` — bench definitions, scoring design, reproducibility, limitations.
+- `docs/HACKATHON.md` — track, pitch, demo narrative, honest shipped/planned split.
+
+Historical verifier-era references (still useful for engine contracts, not for product scope):
+
+- `PROJECT_SPEC.md`, `ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md`, `FRONTEND_DESIGN_SPEC.md`, `ORIVOXX_COMPLETE_BLUEPRINT.md`.
+
+Operating rules:
+
+- `AGENTS.md` — implementation executor restrictions; updated with the positioning note.
+- `PROPER_VIBE_CODING_WORKFLOW.md` — implementation methodology.
+
+Deprecated: `README_TEMPLATE.md`, `HACKATHON_SOURCE_NOTES.md`, `HACKATHON_SUBMISSION_CHECKLIST.md`, `ORIVOXX_COMPLETE_BLUEPRINT.md`.
 
 ## Must-preserve invariants
 
-1. Deterministic FAIL cannot be overridden by model PASS.
-2. Missing or invalid evidence cannot become PASS.
-3. Unknown requirement IDs/evidence references from model output are rejected.
-4. A real Token Factory call is required; do not fake a successful model call.
-5. Provider outage gives honest PARTIAL/UNVERIFIED output.
-6. AI teaching is user-triggered and never changes verification findings or gate.
-7. Graph relationships come from parsed source evidence; the model never invents graph edges.
-8. Red FAIL/DRIFT nodes require a validated finding/evidence path mapped to that exact file. Unmapped findings remain visible in the findings list.
-9. The frontend is dark-only on all pages and states; `/workspace` is map-first with Details/Insights/Code inspector and a findings-list fallback.
-10. No uploaded code execution, no persistent upload storage, no app DB, no auth system, no live watch, no local CLI, no agent adapters in this MVP.
-11. Do not start another phase after completing the assigned phase.
+1. Deterministic FAIL cannot be overridden by model output.
+2. Missing or invalid evidence is `UNVERIFIED`, never `PASS`.
+3. Unknown requirement IDs, paths, or evidence references are rejected.
+4. The scoring engine makes no model calls and executes no produced code.
+5. The model is used only for optional explanations and never changes score, findings, verdicts, or gate.
+6. Graph edges come from static source evidence, never from a model.
+7. Uploaded/captured archives are processed in memory with path, size, entry-count, and secret protections.
+8. No source, archive bytes, prompts, secrets, or raw model responses in logs.
+9. Provider keys stay server-only. No `NEXT_PUBLIC_` secrets.
+10. Planned capabilities are documented as planned, not shipped.
 
-## Current source-of-truth files
+## Next task (only after human approval of the docs pass)
 
-- `PROJECT_SPEC.md` — product requirements, user flows, acceptance criteria.
-- `ARCHITECTURE.md` — fixed stack, API, AI, privacy, security, deployment.
-- `FRONTEND_DESIGN_SPEC.md` — dark-only visual system, UI layouts, map interactions, grounded node states, responsive/accessibility rules, and reference patterns.
-- `IMPLEMENTATION_PLAN.md` — phases and checkpoints.
-- `AGENTS.md` — executor restrictions.
-- `ORIVOXX_COMPLETE_BLUEPRINT.md` — consolidated design and 30-section audit.
-- `PROPER_VIBE_CODING_WORKFLOW.md` — user's governing implementation methodology.
+1. Scaffold `packages/benchmarks` with a task manifest schema, task versioning, ruleset versioning, and one TaskBoard task derived from the fixtures.
+2. Scaffold `packages/harness` with an adapter interface and a fake/no-op adapter for tests before any real agent adapter.
+3. Add a scoring config and a pure score function over existing rule outcomes. Keep it out of `packages/core` if it needs benchmark-specific task metadata.
+4. Add the sandbox/runner design review before executing any real agent.
+5. Build the leaderboard read path and result explorer only after the run artifact shape is stable.
 
-## Exact next task: Phase 0
+Do not implement adapters, sandbox execution, or persistence in the same step as the scoring scaffold.
 
-Create the pnpm workspace and Next.js/TypeScript skeleton, testing/linting, shared core package, environment validation, `/api/v1/health`, and a minimal server-only Token Factory smoke-test adapter. Do not implement ZIP intake, spec parser, verification engine, upload UI, teaching, user flows, or report pages yet.
+## Verification commands
 
-The assigned Phase 0 must prove that `nvidia/Nemotron-3.5-Super-VL` can actually be called with configured Token Factory credentials. If the endpoint/model/response format is incompatible, document the exact evidence and STOP; do not silently choose another provider or model.
+These are the existing workspace scripts. They were **not run** during the documentation pass:
 
-## Required Phase 0 verification
-
-- clean dependency install;
-- lint and typecheck;
-- unit test runner starts;
-- workspace build succeeds;
-- `/api/v1/health` exposes safe status only;
-- server-side smoke test succeeds with a real provider request (do not put API key in logs or client bundle);
-- verify no `.env` or credentials in diff;
-- commit only if acceptance criteria pass: `chore: bootstrap orivoxx hackathon app`.
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm smoke   # requires a real NEBIUS_API_KEY
+```
 
 ## End-of-task report
 
-List files changed; exact commands run; actual outcomes; result of real Token Factory smoke test; known issues; acceptance pass/fail; commit hash if committed. Then STOP.
+List files changed; commands actually run and their outcomes; documentation claims verified against code; known issues; acceptance pass/fail. Do not commit unless the assigned instruction authorizes it. Then STOP.

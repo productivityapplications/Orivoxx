@@ -1,10 +1,16 @@
 # AGENTS.md — ORIVOXX HACKATHON MVP
 
+> **Positioning update (15 November 2026 — documentation pass):**
+> - The product is being repositioned as a **benchmarking platform for AI software-engineering agents** for the HackCulture AI Global Hackathon. The deterministic verification engine is now the **scoring rubric**.
+> - Current product/architecture narrative: `docs/VISION.md`, `docs/ARCHITECTURE.md`, `docs/BENCHMARKS.md`, `docs/HACKATHON.md`.
+> - The security, privacy, evidence, and testing rules in this file remain in force for the scoring engine. Where this file says "no agent adapters" or "no uploaded code execution", that boundary described the verifier-era build. The proposed benchmark harness runs agents inside an isolated sandbox; the scoring engine still never executes the produced repository. That change requires explicit human approval before code is written.
+> - Do not start benchmark-layer code until this documentation pass is reviewed. One phase per instruction still applies.
+
 ## Mission
 
 You are Orivoxx's implementation executor. The human owns product decisions, architecture, threat model, scope, and acceptance criteria. You implement only the explicitly assigned phase in `IMPLEMENTATION_PLAN.md`.
 
-Orivoxx is a developer copilot that verifies AI-built software against `PROJECT_SPEC.md` and teaches users from source code and verification findings. For this hackathon MVP, it is a hosted Next.js application with a bundled synthetic sample and safe project ZIP analysis. It makes actual runtime inference calls to Nebius Token Factory with NVIDIA Nemotron.
+Orivoxx is a benchmarking platform for AI software-engineering agents. The shipped deterministic engine verifies AI-built software against `PROJECT_SPEC.md` and teaches users from source code and verification findings; that engine is now the benchmark scoring rubric. For the benchmark build, it is a hosted Next.js application with a bundled synthetic sample format and safe project ZIP analysis utilities. The provider adapter makes actual runtime inference calls to Nebius Token Factory with NVIDIA Nemotron for smoke tests and, later, optional explanations.
 
 ## Source of truth
 
@@ -28,11 +34,11 @@ Do not change the stack, model ID, provider, deployment model, or product bounda
 
 ## Non-negotiable product rules
 
-1. Orivoxx verifies specification conformance and teaches users through their actual source and findings; it is not a general coding course.
+1. Orivoxx benchmarks specification conformance of agent-built software; the shipped engine verifies requirements and teaches through actual source and findings. It is not a general coding course.
 2. Do not generate or edit user code or apply fixes.
 3. No uploaded code, scripts, builds, tests, packages, or commands may be executed on the server.
 4. Process upload archives in memory only; do not persist source, ZIP contents, raw prompts, or report contents on the server.
-5. No app database, account system, local CLI, Git watcher, agent adapters, or extra tracks/integrations in MVP.
+5. No app database, account system, local CLI, Git watcher, or extra tracks/integrations in the scoring engine. Agent adapters and sandboxed execution belong to the planned benchmark harness (`docs/ARCHITECTURE.md`) and require explicit approval before implementation.
 6. A genuine server-side runtime call to Nebius Token Factory using the selected NVIDIA model is required. Never fake an AI call or model result.
 7. Server-side provider failures must be visible. AI-dependent requirements become UNVERIFIED/PARTIAL, never false PASS.
 8. Deterministic FAIL overrides model PASS. Missing evidence is UNVERIFIED. Model output is untrusted and cannot create arbitrary requirement IDs, source paths, line references, or check rules.

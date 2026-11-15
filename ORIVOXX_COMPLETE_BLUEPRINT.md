@@ -1,5 +1,7 @@
 # ORIVOXX — COMPLETE IMPLEMENTATION BLUEPRINT (NEBIUS x NVIDIA HACKATHON EDITION)
 
+> **[DEPRECATED — see `docs/`]** This is a historical verifier-era blueprint for the earlier Nebius x NVIDIA hackathon. The current product positioning is in `docs/VISION.md`, `docs/ARCHITECTURE.md`, `docs/BENCHMARKS.md`, and `docs/HACKATHON.md`. The embedded copies of the standalone documents are stale.
+
 **Blueprint version:** 2.1  
 **Prepared:** 20 October 2026  
 **Implementation status:** No application implementation started by this blueprint.  

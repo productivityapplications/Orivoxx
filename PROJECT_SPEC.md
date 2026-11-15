@@ -1,10 +1,12 @@
+> **Positioning update (15 November 2026):** This is the verifier-era product specification. The current product positioning is a benchmarking platform for AI software-engineering agents; see `docs/VISION.md`, `docs/ARCHITECTURE.md`, and `docs/BENCHMARKS.md`. This document remains the reference for the `PROJECT_SPEC.md` requirement format and the deterministic engine's product rules, which are reused as the benchmark scoring rubric.
+
 # ORIVOXX — PROJECT SPECIFICATION
 
-**Version:** Hackathon MVP v2.1  
-**Last reviewed:** 20 October 2026  
-**Status:** Product decisions frozen for MVP; implementation not started  
-**Primary hackathon track:** Best Apps and Agents  
-**Submission deadline:** Friday, 30 October 2026, 6:00 p.m. WAT (Nigeria)
+- **Version:** Hackathon MVP v2.1
+- **Last reviewed:** 20 October 2026
+- **Status:** Verifier-era spec; deterministic engine partially implemented (contracts, archive, parser, checks, verdict, report)
+- **Primary hackathon track:** Best Apps and Agents (earlier Nebius x NVIDIA event)
+- **Submission deadline:** Friday, 30 October 2026, 6:00 p.m. WAT (Nigeria) — historical
 
 ## 1. Product overview
 

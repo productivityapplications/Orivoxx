@@ -1,3 +1,5 @@
+> **[DEPRECATED — see `README.md`]** This template describes the verifier-era positioning and the earlier Nebius x NVIDIA hackathon. The current root README is `README.md`; benchmark positioning is in `docs/`.
+
 # Orivoxx
 
 **Verify what AI builds. Understand why it matters.**

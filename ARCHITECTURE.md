@@ -1,10 +1,12 @@
+> **Positioning update (15 November 2026):** Orivoxx is being repositioned as a benchmarking platform for AI software-engineering agents. This document describes the verifier-era architecture; its technical contracts for the deterministic engine remain valid and are reused as the benchmark scoring rubric. The target benchmark architecture — task registry, harness, sandbox runner, leaderboard — is in `docs/ARCHITECTURE.md`. This document does not describe that layer.
+
 # ORIVOXX — ARCHITECTURE
 
-**Version:** Hackathon MVP v2.1  
-**Architecture status:** Frozen pending Phase 0 smoke tests  
-**Primary deployment:** Vercel-hosted Next.js application  
-**Inference provider:** Nebius Token Factory  
-**Selected model:** `nvidia/Nemotron-3.5-Super-VL`
+- **Version:** Hackathon MVP v2.1
+- **Architecture status:** Verifier-era architecture; scoring-engine contracts remain current
+- **Primary deployment:** Vercel-hosted Next.js application
+- **Inference provider:** Nebius Token Factory
+- **Selected model:** `nvidia/Nemotron-3.5-Super-VL`
 
 ## 1. System goals and constraints
 

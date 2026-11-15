@@ -1,8 +1,10 @@
+> **Positioning update (15 November 2026):** This plan covers the verifier-era build and the earlier Nebius x NVIDIA hackathon. The current product is a benchmarking platform for AI software-engineering agents. Do not start benchmark-layer code from this plan; see `docs/ARCHITECTURE.md` and `docs/HACKATHON.md` for the target scope.
+
 # ORIVOXX — IMPLEMENTATION PLAN
 
-**Version:** Hackathon MVP v2.1  
-**Submission deadline:** Friday, 30 October 2026, 6:00 p.m. WAT  
-**Operating rule:** One phase per coding-agent instruction. Implement → test → inspect → fix → commit → checkpoint → stop.
+- **Version:** Hackathon MVP v2.1
+- **Submission deadline:** Friday, 30 October 2026, 6:00 p.m. WAT — historical
+- **Operating rule:** One phase per coding-agent instruction. Implement → test → inspect → fix → commit → checkpoint → stop.
 
 This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architecture before code, small independently testable phases, evidence-based verification, small Git checkpoints, and no automatic progression to the next phase.
 

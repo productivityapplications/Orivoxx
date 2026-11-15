@@ -1,3 +1,5 @@
+> **[DEPRECATED — see `docs/HACKATHON.md`]** This checklist targets the earlier Nebius x NVIDIA hackathon, not the HackCulture AI Global Hackathon.
+
 # ORIVOXX — HACKATHON SUBMISSION CHECKLIST
 
 **Deadline:** Friday, 30 October 2026, 6:00 p.m. WAT (Nigeria). Recheck the official Devpost page before submitting.

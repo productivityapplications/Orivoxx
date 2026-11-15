@@ -1,5 +1,7 @@
 # Orivoxx Privacy & Source-Processing Notice
 
+> **Benchmark-platform note (planned, not shipped):** the notice below covers the verifier-era dashboard. The planned benchmark harness will run third-party agents in an isolated sandbox and capture their produced repositories. That introduces new privacy and security decisions — artifact retention, sandbox network policy, and leaderboard publication. They are not implemented and must be documented before the harness runs any user-submitted agent. See `docs/ARCHITECTURE.md`.
+
 Orivoxx analyzes source code only after a user starts an analysis and acknowledges the disclosure. Selecting a ZIP file alone does not transmit its contents to the AI provider.
 
 For semantic verification and explanations, Orivoxx sends a bounded subset of eligible source context and relevant project-specification text to Nebius Token Factory. The application does not intentionally save uploaded archives or source code to persistent server storage, and request bodies/prompts must not be logged. The current report is held in browser memory and may be lost on refresh.
@@ -8,4 +10,4 @@ Nebius Token Factory processes requests under the terms applicable to your accou
 
 Orivoxx excludes common secret files, dependency folders, build output, binary files, and generated files. These filters reduce risk but cannot guarantee detection of every secret. Users remain responsible for reviewing their archive before upload.
 
-Orivoxx never executes uploaded code, tests, builds, package installation, shell commands, or arbitrary scripts. Findings are assistance, not a guarantee of correctness or security. AI explanations are educational and never override the verifier's deterministic rules.
+Orivoxx never executes uploaded code, tests, builds, package installation, shell commands, or arbitrary scripts. Findings are assistance, not a guarantee of correctness or security. AI explanations are educational and never override the deterministic scoring rules.
