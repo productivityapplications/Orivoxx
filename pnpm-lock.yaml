@@ -19,6 +19,9 @@ importers:
       '@orivoxx/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@orivoxx/harness':
+        specifier: workspace:*
+        version: link:../../packages/harness
       '@orivoxx/results':
         specifier: workspace:*
         version: link:../../packages/results

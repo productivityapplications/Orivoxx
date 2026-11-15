@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { AppShell } from "@/components/app-shell";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +16,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Orivoxx",
-  description: "Verify what AI builds. Understand why it matters.",
+  title: {
+    default: "Orivoxx — Benchmark the agent, not just the model",
+    template: "%s · Orivoxx",
+  },
+  description:
+    "A deterministic scorecard for AI software-engineering agents: versioned tasks, sandboxed runs, static scoring on spec conformance, security, and maintainability.",
+  applicationName: "Orivoxx",
 };
 
 export default function RootLayout({
@@ -23,7 +30,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   );
 }

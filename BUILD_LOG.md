@@ -301,3 +301,34 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - Image size is 1.44 GB because Aider pulls litellm/tokenizers. Acceptable for local organizer runs; not deployed to Vercel.
 - Aider prints a harmless `Input is not a terminal` warning to stderr.
 - One stale Upstash row from the pre-fix Aider run remains fetchable by id.
+
+## 2026-11-15 — P7 complete (web surfaces)
+
+**Files**
+
+- `docs/FRONTEND_BENCHMARK_SPEC.md` — list-first UI contract: tokens, routes, page contracts, status vocabulary, states, a11y, responsive, component inventory.
+- `apps/web/src/components/` — `app-shell`, `site-nav`, `status-chip`, `score-block`, `cap-banner`, `version-strip`, `tally-chips`, `requirement-list`, `code-block`, `diff-view`, `leaderboard-table`, `task-card`, `empty-state`, `submit-form`, `compare-panel`.
+- Pages: `/`, `/benchmarks`, `/benchmarks/[taskId]`, `/submit`, `/results/[resultId]`, `/leaderboard`, `/compare`, `/privacy`, `not-found`; dark-only `globals.css` tokens; metadata.
+- APIs: `tasks`, `tasks/[taskId]`, `runs` (fake self-serve), `results` (list alias).
+- `src/server/runs.ts` — fake run: materialize → capture → score → append.
+- Tests: component tests (score bars, requirement expansion, tally, table, chips) and API tests (fake run + store, task 404, validation, body limits).
+
+**Verification**
+
+- `pnpm --filter web test` → 6 files, 32 tests pass.
+- Typecheck, lint, and `next build` pass; 14 routes compiled.
+- Production server checks: `/`, `/benchmarks`, `/benchmarks/taskboard`, `/leaderboard`, `/compare`, `/submit`, `/privacy` → 200; unknown result → 404.
+- `POST /api/v1/runs {taskboard, compliant}` → 201 `res_b07ed478…`, overall 99.5, store `upstash`.
+- `/results/<id>` renders score, requirement outcomes, and diff; `/leaderboard` shows python, aider, and fake rows; `/compare?task=taskboard` defaults to python vs aider with `Same model`.
+
+**Decisions**
+
+- Public submit is fake-only and synchronous. No arbitrary command field, no model call, no Docker on Vercel.
+- Requirement detail shows the declared deterministic rule and the computed outcome; per-line matched text is not stored (bounded scorecard), so the UI never invents a line reference.
+- Compare defaults to the first same-model pair with different adapter ids; query params override.
+- Result pages read the store directly in server components; no client fetch for reads.
+
+**Known issues**
+
+- `/docs` is linked from nav but arrives in P9.
+- No explanation surface in this build; no model call is made from any page.

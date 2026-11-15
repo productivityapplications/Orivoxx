@@ -12,6 +12,9 @@ export default defineConfig({
       "@orivoxx/core": fileURLToPath(
         new URL("../../packages/core/src/index.ts", import.meta.url),
       ),
+      "@orivoxx/harness": fileURLToPath(
+        new URL("../../packages/harness/src/index.ts", import.meta.url),
+      ),
       "@orivoxx/results": fileURLToPath(
         new URL("../../packages/results/src/index.ts", import.meta.url),
       ),
@@ -19,6 +22,6 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
   },
 });
