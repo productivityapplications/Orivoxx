@@ -11,6 +11,7 @@ Every point traces to a named rule and evidence. **No model is in the score path
 [![tests](https://img.shields.io/badge/unit%20tests-459%20passing-48C9A4?style=flat-square)](#testing)
 [![score](https://img.shields.io/badge/model%20in%20score%20path-none-A78BFA?style=flat-square)](#the-deterministic-guarantee)
 [![sandbox](https://img.shields.io/badge/agent%20execution-Docker%20sandbox-75A7FF?style=flat-square)](#the-sandbox-guarantee)
+[![deployed](https://img.shields.io/badge/deployed-orivoxx.vercel.app-75A7FF?style=flat-square)](https://orivoxx.vercel.app)
 [![license](https://img.shields.io/badge/license-MIT-8792A2?style=flat-square)](LICENSE)
 
 ## Table of contents
@@ -20,6 +21,7 @@ Every point traces to a named rule and evidence. **No model is in the score path
 - [Demo video](#demo-video)
 - [Screenshots](#screenshots)
 - [Architecture](#architecture)
+- [Live demo](#live-demo)
 - [Quickstart](#quickstart)
 - [Run a real agent](#run-a-real-agent)
 - [Adding a benchmark task](#adding-a-benchmark-task)
@@ -106,12 +108,18 @@ Real adapter runs execute locally in Docker and write scorecards to Upstash. Ver
 
 Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/ADAPTERS.md`](docs/ADAPTERS.md), [`docs/SANDBOX.md`](docs/SANDBOX.md).
 
+## Live demo
+
+**<https://orivoxx.vercel.app>**
+
+The deployment is read-only for real results. The fake baseline is self-serve: `/submit` creates a real, immutable scorecard without a model call. Real adapter runs are organizer-executed in Docker, then published to the shared store.
+
 ## Quickstart
 
 **Requirements:** Node.js 24.22.1+, pnpm 10+, Docker (only for real adapter runs).
 
 ```bash
-git clone https://github.com/onyebuchidaniel/orivoxx.git
+git clone https://github.com/productivityapplications/Orivoxx.git
 cd orivoxx
 pnpm install --frozen-lockfile
 pnpm build
@@ -245,6 +253,9 @@ pnpm -r test        # 459 unit tests: core 217, benchmarks 63, results 53, harne
 pnpm -r typecheck
 pnpm -r lint
 pnpm -r build
+
+# End-to-end: submit -> run -> score -> leaderboard (throwaway local store)
+pnpm test:e2e
 
 # Docker sandbox integration suite (requires the image)
 pnpm --filter @orivoxx/harness sandbox:build

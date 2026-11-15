@@ -15,6 +15,10 @@
     "smoke": "pnpm --filter web smoke",
     "bench:list": "node --env-file-if-exists=.env.local packages/harness/scripts/run-benchmark.mjs --list",
     "bench:run": "node --env-file-if-exists=.env.local packages/harness/scripts/run-benchmark.mjs",
-    "bench:publish": "node --env-file-if-exists=.env.local packages/harness/scripts/publish-results.mjs"
+    "bench:publish": "node --env-file-if-exists=.env.local packages/harness/scripts/publish-results.mjs",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
   }
 }

@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <a
-            href="https://github.com/onyebuchidaniel/orivoxx"
+            href="https://github.com/productivityapplications/Orivoxx"
             target="_blank"
             rel="noreferrer noopener"
             className="hidden shrink-0 rounded-md border border-border-subtle px-2.5 py-1.5 text-xs text-secondary transition-colors hover:border-border-strong hover:text-primary sm:inline-flex"

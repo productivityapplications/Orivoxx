@@ -1,8 +1,8 @@
 # AI_HANDOFF.md — ORIVOXX
 
 - **Updated:** 15 November 2026
-- **Project state:** P0–P8 committed; P9 (README, in-app docs, screenshots, quickstart) in progress; P10 video and P11 submission pack pending.
-- **Current task:** finish the documentation pass, then record and assemble the demo, deploy, and run the final audit. Phase 0 pre-flight was the only approval gate.
+- **Project state:** P0–P11 complete. Deployed at https://orivoxx.vercel.app, repository pushed to GitHub, demo video shipped.
+- **Current task:** none in the build plan. Remaining items are human submission actions (Devpost form, optional video upload) and any review feedback.
 - **Provider:** OpenRouter via the OpenAI-compatible API. Nebius is an optional demoted provider behind the same interface, not a primary path.
 
 ## Product
@@ -43,10 +43,14 @@ Real adapter runs execute locally in Docker (python-openrouter, aider-openrouter
 - Recorded real runs: python 97.3, aider 97.3 (same model), python 98.1 (second model).
 - README, screenshots, fresh-clone quickstart.
 
-## Remaining
+## Final state
 
-- P10: narrated demo video (`demo/`).
-- P11: Playwright E2E for submit → run → score → leaderboard, Vercel deployment, final audit, submission draft.
+- Deployed: https://orivoxx.vercel.app (Vercel, project `orivoxx`, Upstash-backed reads).
+- Repository: https://github.com/productivityapplications/Orivoxx.
+- Demo: `demo/orivoxx-demo.mp4` (2:38, 1080p).
+- Submission draft: `SUBMISSION.md`.
+- Verification: 459 unit tests, 5 Playwright E2E, 12 Docker integration tests, typecheck/lint/build green.
+- Devpost submission and video upload are human actions.
 
 ## Must-preserve invariants
 

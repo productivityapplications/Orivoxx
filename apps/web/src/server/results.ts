@@ -88,14 +88,6 @@ interface StoreBundle {
   seed: SeedResultStore;
 }
 
-function isDeploymentWithoutStore(): boolean {
-  return (
-    process.env.VERCEL === "1" ||
-    process.env.ORIVOXX_ENV === "production" ||
-    process.env.NODE_ENV === "production"
-  );
-}
-
 async function stores(): Promise<StoreBundle> {
   const env = getServerEnv();
   const seed = await getSeedStore();
@@ -143,27 +135,9 @@ export async function webLeaderboard(
   options: { taskId?: string; limit?: number; kind?: LeaderboardKind } = {},
 ): Promise<WebLeaderboard> {
   const { primary, seed } = await stores();
-  const readOnly = primary.kind === "seed";
   const kind = options.kind ?? "agents";
   // Read enough rows that an agents-only filter still fills the requested page.
   const query = { limit: kind === "agents" ? 200 : options.limit };
-
-  // No shared store and not a local run directory: serve the bundled rows.
-  if (!readOnly && primary.kind === "local" && isDeploymentWithoutStore()) {
-    const entries =
-      options.taskId === undefined
-        ? await seed.list(query)
-        : await seed.listByTask(options.taskId, query);
-    const selected = selectKind(entries, kind, options.limit);
-
-    return {
-      entries: selected.entries,
-      store: "seed",
-      degraded: false,
-      readOnly: true,
-      baselinesOnly: selected.baselinesOnly,
-    };
-  }
 
   const read = await readLeaderboard({ primary, fallback: seed, query, taskId: options.taskId });
 
@@ -214,18 +188,6 @@ export async function webLeaderboard(
 
 export async function webResult(resultId: string): Promise<WebResult> {
   const { primary, seed } = await stores();
-
-  if (primary.kind === "local" && isDeploymentWithoutStore()) {
-    const result = await seed.get(resultId);
-
-    return {
-      result,
-      store: "seed",
-      degraded: false,
-      readOnly: true,
-    };
-  }
-
   const read = await readResult({ primary, fallback: seed }, resultId);
 
   return {

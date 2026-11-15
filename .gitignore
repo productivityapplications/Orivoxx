@@ -18,3 +18,5 @@ demo/recordings/
 
 # Local append-only result store (never commit recorded results)
 .data/
+.vercel
+.env*

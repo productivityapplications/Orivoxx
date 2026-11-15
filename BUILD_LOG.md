@@ -422,3 +422,45 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 
 - The Piper voice is clearly synthetic compared with ElevenLabs. Content and sync are correct; timbre is the trade-off.
 - The video's submit scene is brief (about 4 s) because the fake run returns instantly.
+
+## 2026-11-15 — P11 complete (final audit and submission pack)
+
+**Files**
+
+- `e2e/benchmark-flow.spec.ts` — submit → run → score → leaderboard; regressed cap; keyboard toggle; 404; dark-only + overflow at 1440 and 390 px.
+- `playwright.config.ts`, `e2e/global-setup.ts` — production server on :3300 with a throwaway local store and no shared Redis.
+- `SUBMISSION.md` — Devpost field draft.
+- `README.md` — live URL, deployment section, E2E command, correct repository URL.
+- `apps/web/src/components/app-shell.tsx` — correct GitHub link.
+- `apps/web/src/server/results.ts` — removed the production shortcut that made a local-store result unreadable; local results now win over the seed in every environment.
+- `apps/web/src/server/rate-limit.ts` — explicit `ORIVOXX_ENV=test` escape hatch for E2E only.
+- `vercel` project settings: root `apps/web`, Next.js preset, install/build from the repo root.
+
+**Verification**
+
+- `pnpm -r test` → 459 passed: core 217, benchmarks 63, results 53, harness 82, web 44.
+- `pnpm -r typecheck`, `pnpm -r lint`, `pnpm -r build` → pass.
+- `ORIVOXX_DOCKER_TESTS=1 pnpm --filter @orivoxx/harness test` → 94 passed (12 Docker).
+- `pnpm test:e2e` → 5 passed in 19.1 s.
+- Deterministic proof: `packages/benchmarks/src/scoring/import-graph.test.ts` passes; no provider/adapter/network import in the scoring source.
+- Deployed smoke test, https://orivoxx.vercel.app:
+  - `/`, `/benchmarks`, `/leaderboard`, `/compare`, `/submit`, `/docs`, `/docs/scoring`, `/privacy` → 200.
+  - `/api/v1/health` → model configured, store `upstash`, seed 4.
+  - `/api/v1/leaderboard` → 3 harness rows (98.1 / 97.3 / 97.3), `baselinesOnly: false`.
+  - CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, `x-request-id` present.
+  - `POST /api/v1/runs` same-origin → 201, rate-limit headers, store `upstash`; cross-origin → 403.
+  - Smoke row removed afterwards; 7 rows remain (4 seed + 3 harness).
+- Secret scan: only ignored `.env.local` and synthetic test fixtures contain key-shaped strings; no real secret tracked.
+
+**Decisions**
+
+- E2E uses a local result store and no Redis so the shared leaderboard is never polluted; `ORIVOXX_ENV=test` is the only way to bypass production fail-closed rate limiting, and Vercel never sets it.
+- The deployment is root `apps/web` with install/build commands that run from the repo root; output `.next`.
+- Real results stay organizer-executed; public writes are fake-baseline only.
+
+**Known issues / open submission items**
+
+- Devpost form and video upload are human actions; `SUBMISSION.md` is the draft.
+- Demo narration uses the Piper fallback because the ElevenLabs free quota was exhausted; documented in `demo/README.md`.
+- Vercel Deployment Protection is visible in the CLI metadata but the production URL is publicly reachable.
+- The repository needs a final `git push` (done in the audit sequence) and the human should confirm the MIT copyright holder.

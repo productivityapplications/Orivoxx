@@ -19,6 +19,10 @@ export type RateLimitOutcome =
 let limiter: Ratelimit | null | undefined;
 
 function production(): boolean {
+  if (process.env.ORIVOXX_ENV === "test") {
+    return false;
+  }
+
   return process.env.NODE_ENV === "production" || process.env.ORIVOXX_ENV === "production";
 }
 
