@@ -1,0 +1,11 @@
+node_modules
+dist
+src
+scripts
+coverage
+*.test.ts
+tsconfig.json
+tsconfig.typecheck.json
+vitest.config.ts
+eslint.config.mjs
+package.json

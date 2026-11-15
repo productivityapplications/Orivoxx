@@ -278,8 +278,12 @@ describe("run preconditions", () => {
 });
 
 describe("adapter registry", () => {
-  it("exposes only the fake baseline until real adapters ship", () => {
-    expect(adapterSummaries().map((adapter) => adapter.id)).toEqual(["fake"]);
+  it("exposes the baseline and the real harness adapters", () => {
+    expect(adapterSummaries().map((adapter) => adapter.id)).toEqual([
+      "fake",
+      "python-openrouter",
+      "aider-openrouter",
+    ]);
     expect(getAdapter("fake").kind).toBe("baseline");
   });
 

@@ -20,7 +20,7 @@ packages/benchmarks              versioned benchmark tasks and the deterministic
   └── fingerprint                canonical ruleset fingerprint
 
 packages/harness                 the only component that executes an agent
-  ├── adapters                   adapter contract, registry, fake baseline
+  ├── adapters                   adapter contract, registry, fake + python + aider
   ├── sandbox                    Docker executor, allowlisted model proxy
   ├── capture                    bounded artifact capture + repository fingerprint
   ├── diff                       bounded unified produced-code diff

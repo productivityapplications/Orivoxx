@@ -266,3 +266,38 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - The local store scans every result file for `list()`. That is fine for a demo-scale directory; the shared store is indexed.
 - The 90-day retention is documented and enforced by an organizer cleanup, not by a scheduled job. No scheduler exists in this build.
 - The public leaderboard is read-only in deployment by design; writes are organizer-executed.
+
+## 2026-11-15 — P6 complete (real OpenRouter adapters)
+
+**Files**
+
+- `packages/harness/agents/python_openrouter.py` — stdlib agent loop: plan call, one call per file, path/size validation, safe provider errors.
+- `packages/harness/agents/aider_runner.py` — spec-path extractor + pinned Aider 0.86.2 wrapper (`whole` edit format, no git, history in `/tmp`).
+- `src/adapters/python.ts`, `src/adapters/aider.ts`, `src/adapters/model.ts`, registry + exports.
+- `src/adapters/adapters.test.ts`, `python.integration.test.ts`, `aider.integration.test.ts`.
+- `docker/sandbox.Dockerfile` — pip-installs `aider-chat==0.86.2` into `/opt/aider`, copies agent entry points; build context moved to the package root with `.dockerignore`.
+- `scripts/run-benchmark.mjs` — organizer CLI; `bench:list` / `bench:run` / `bench:publish` root scripts.
+- `docs/ADAPTERS.md`, `docs/FRONTEND_BENCHMARK_SPEC.md` (P7 contract, written before UI work).
+
+**Verification**
+
+- Harness: 9 test files, 82 passed + 12 Docker tests skipped; typecheck/lint pass.
+- Image rebuilt with Aider: `orivoxx/sandbox:1.0.0` (1.44 GB).
+- Real runs, taskboard, proxy network, Upstash:
+  - python / `openai/gpt-4o-mini` → 97.3 (100/100/82), 9/9 PASS, 24.4 s, `res_f74d49e5…`.
+  - aider / `openai/gpt-4o-mini` → 97.3 (100/100/82), 9/9 PASS, 25.7 s, `res_a39c6e29…`.
+  - python / `deepseek/deepseek-chat-v3-0324` → 98.1 (100/100/87.1), 9/9 PASS, 35.6 s, `res_71626175…`.
+- First aider run scored 94.4 due to `.ts` winning over `.tsx` in the spec-path regex; fixed, image rebuilt, rerun recorded.
+
+**Decisions**
+
+- Aider is pinned by image tag and adapter version; model is configuration recorded per row.
+- The spec-path extractor reads `PROJECT_SPEC.md`, never the ruleset, so the harness does not leak rubric-only paths.
+- Agent output is bounded and path-validated. Neither agent executes produced code; scoring stays static.
+- `bench:run` is organizer-only; the public app has no arbitrary-command field.
+
+**Known issues**
+
+- Image size is 1.44 GB because Aider pulls litellm/tokenizers. Acceptable for local organizer runs; not deployed to Vercel.
+- Aider prints a harmless `Input is not a terminal` warning to stderr.
+- One stale Upstash row from the pre-fix Aider run remains fetchable by id.

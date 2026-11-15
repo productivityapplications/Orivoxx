@@ -1,6 +1,8 @@
 import { AdapterKindSchema, AdapterModelSchema, type AgentAdapter } from "../contracts.js";
 import { HarnessError } from "../errors.js";
+import { createAiderOpenRouterAdapter } from "./aider.js";
 import { createFakeAdapter, FAKE_ADAPTER_ID } from "./fake.js";
+import { createPythonOpenRouterAdapter } from "./python.js";
 
 export interface AdapterSummary {
   id: string;
@@ -10,7 +12,11 @@ export interface AdapterSummary {
   model: { provider: string; name: string; baseUrl: string | null } | null;
 }
 
-const ADAPTERS: readonly AgentAdapter[] = [createFakeAdapter()];
+const ADAPTERS: readonly AgentAdapter[] = [
+  createFakeAdapter(),
+  createPythonOpenRouterAdapter(),
+  createAiderOpenRouterAdapter(),
+];
 
 export function listAdapters(): readonly AgentAdapter[] {
   return ADAPTERS;

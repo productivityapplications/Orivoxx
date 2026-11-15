@@ -24,7 +24,7 @@ const child = spawn(
     image,
     "-f",
     resolve(packageRoot, "docker", "sandbox.Dockerfile"),
-    resolve(packageRoot, "docker"),
+    packageRoot,
   ],
   { stdio: "inherit" },
 );

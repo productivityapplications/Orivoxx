@@ -12,6 +12,9 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "build": "pnpm -r build",
-    "smoke": "pnpm --filter web smoke"
+    "smoke": "pnpm --filter web smoke",
+    "bench:list": "node --env-file-if-exists=.env.local packages/harness/scripts/run-benchmark.mjs --list",
+    "bench:run": "node --env-file-if-exists=.env.local packages/harness/scripts/run-benchmark.mjs",
+    "bench:publish": "node --env-file-if-exists=.env.local packages/harness/scripts/publish-results.mjs"
   }
 }

@@ -5,6 +5,7 @@
   --color-sidebar: var(--bg-sidebar);
   --color-panel: var(--bg-panel);
   --color-raised: var(--bg-raised);
+  --color-inset: var(--bg-inset);
   --color-canvas: var(--bg-canvas);
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
@@ -12,6 +13,13 @@
   --color-secondary: var(--text-secondary);
   --color-muted: var(--text-muted);
   --color-accent: var(--accent);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-pass: var(--status-pass);
+  --color-fail: var(--status-fail);
+  --color-drift: var(--status-drift);
+  --color-unverified: var(--status-warning);
+  --color-neutral: var(--status-neutral);
+  --color-progress: var(--status-progress);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -21,6 +29,7 @@
   --bg-sidebar: #101319;
   --bg-panel: #151922;
   --bg-raised: #1b202a;
+  --bg-inset: #0d1117;
   --bg-canvas: #0d1117;
   --border-subtle: #282f3a;
   --border-strong: #3a4351;
@@ -51,4 +60,22 @@ body {
     -apple-system,
     "Segoe UI",
     sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent-secondary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
