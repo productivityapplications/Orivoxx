@@ -13,3 +13,6 @@ test-results/
 *.log
 .DS_Store
 demo/reference/
+
+# Local append-only result store (never commit recorded results)
+.data/

@@ -9,7 +9,9 @@
 ```text
 apps/web                         Next.js 16 shell
   ├── /                          dark landing placeholder
-  └── /api/v1/health             safe provider/version status
+  ├── /api/v1/health             safe provider/leaderboard status
+  ├── /api/v1/leaderboard        ranked result rows (seed fallback, no-store)
+  └── /api/v1/results/:id        full stored result by id (seed fallback)
 
 packages/benchmarks              versioned benchmark tasks and the deterministic score
   ├── tasks                      registry, TaskBoard, Linkstash, fixtures, generated assets
@@ -21,7 +23,16 @@ packages/harness                 the only component that executes an agent
   ├── adapters                   adapter contract, registry, fake baseline
   ├── sandbox                    Docker executor, allowlisted model proxy
   ├── capture                    bounded artifact capture + repository fingerprint
+  ├── diff                       bounded unified produced-code diff
+  ├── benchmark                  run → capture → score → immutable result
   └── run                        run lifecycle, command/env validation, summaries
+
+packages/results                 append-only result storage
+  ├── contracts                  BenchmarkResult/LeaderboardEntry, consistency invariants
+  ├── local                      one immutable JSON file per result
+  ├── upstash                    atomic Lua append + sorted indexes
+  ├── seed                       bundled read-only fallback rows
+  └── read                       fallback reads, degraded flag, store factory
 
 packages/core                    pure TypeScript verification engine
   ├── archive                    bounded in-memory ZIP intake, path checks, redaction
@@ -40,8 +51,8 @@ packages/core                    pure TypeScript verification engine
 What this means in practice:
 
 - The scoring **rubric** exists: versioned tasks, deterministic checks, evidence, verdicts, and a numeric score.
-- The scoring **service** does not: there is no HTTP route that runs the engine over a submitted repository, and there is no leaderboard API yet.
-- The **execution path** exists for organizer-run benchmarks: `packages/harness` runs an adapter in Docker and returns a normalized repository. The public fake-run path and the result explorer are still to be built.
+- The **execution path** exists for organizer-run benchmarks: `packages/harness` runs an adapter in Docker, captures the repository, scores it, and builds an immutable result.
+- The **results layer** exists: append-only local and Upstash stores with a shared `ResultStore` interface, a bundled seed fallback, and read APIs. The public run submission, result explorer, and leaderboard pages are still to be built.
 - The Nebius adapter is demoted to an optional provider; OpenRouter is the featured provider. Neither is in the score path.
 
 ## 2. Target system
@@ -89,10 +100,11 @@ What this means in practice:
 
 | Component | Responsibility | Status |
 |---|---|---|
-| `packages/benchmarks` | Versioned task registry, ruleset manifests, scoring configuration, leaderboard aggregation. | `[PARTIAL]` — tasks, rulesets, scoring config shipped; leaderboard aggregation is P5 |
+| `packages/benchmarks` | Versioned task registry, ruleset manifests, scoring configuration. | `[SHIPPED]` |
 | `packages/harness` | Agent adapter interface, run lifecycle, Docker sandbox, allowlisted model proxy, artifact capture, adapter versioning. | `[SHIPPED]` |
+| `packages/results` | Append-only result storage, leaderboard ordering, Upstash and local stores, seed fallback. | `[SHIPPED]` |
 | `apps/runner` | Optional isolated execution service. | `[SUPERSEDED]` — real runs execute through `packages/harness` on the organizer machine |
-| `apps/web` | Public benchmark UI, run submission, result explorer, leaderboard, explanation requests. | `[PARTIAL]` — shell and health only |
+| `apps/web` | Public benchmark UI, run submission, result explorer, leaderboard, explanation requests. | `[PARTIAL]` — read APIs shipped; pages are P7 |
 | `packages/core` | Deterministic scoring rubric over the captured repository. | `[SHIPPED]` — engine only |
 
 ## 3. Execution flow
@@ -105,7 +117,7 @@ Flow for one organizer-run benchmark run:
 4. **Capture the produced repository.** After the container exits, the workspace is normalized (path validation, denylist filtering, secret redaction, size ceilings) and fingerprinted.
 5. **Score.** `packages/benchmarks` runs the deterministic ruleset and the static import graph over the captured text. No produced code is executed.
 6. **Aggregate.** `scoreRun()` maps rule outcomes to the task score. The result records task/ruleset/adapter/scoring-config versions and the repository fingerprint.
-7. **Publish.** The result is written to the leaderboard store and exposed in the result explorer with per-rule evidence.
+7. **Publish.** The result is appended to the result store (Upstash in deployment, local otherwise) and exposed by the read APIs with per-rule evidence. The store is append-only: a re-run produces a new row.
 
 ### What is deliberately synchronous vs. queued
 

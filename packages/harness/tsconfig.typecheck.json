@@ -6,7 +6,8 @@
     "baseUrl": ".",
     "paths": {
       "@orivoxx/benchmarks": ["../benchmarks/src/index.ts"],
-      "@orivoxx/core": ["../core/src/index.ts"]
+      "@orivoxx/core": ["../core/src/index.ts"],
+      "@orivoxx/results": ["../results/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"],

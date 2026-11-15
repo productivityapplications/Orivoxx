@@ -9,6 +9,9 @@ export default defineConfig({
         new URL("../benchmarks/src/index.ts", import.meta.url),
       ),
       "@orivoxx/core": fileURLToPath(new URL("../core/src/index.ts", import.meta.url)),
+      "@orivoxx/results": fileURLToPath(
+        new URL("../results/src/index.ts", import.meta.url),
+      ),
     },
   },
   test: {

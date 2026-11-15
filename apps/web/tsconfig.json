@@ -19,8 +19,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@orivoxx/core": ["../../packages/core/src/index.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^2.0.4",
+    "@orivoxx/benchmarks": "workspace:*",
     "@orivoxx/core": "workspace:*",
+    "@orivoxx/results": "workspace:*",
     "@xyflow/react": "^12.11.0",
     "next": "16.4.2",
     "openai": "^6.10.0",

@@ -204,3 +204,65 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - The image ships Python 3.12 and Node 24 with no package manager cache. A `python-openrouter` adapter that wants `requests` must use the standard library or the image must be extended and versioned; adapter dependencies are pinned in the image, not installed at run time.
 - Docker Desktop on macOS/Windows may refuse `chown` on bind mounts; `prepareWorkspace` falls back to `chmod -R a+rwX`. Linux organizer machines are the supported path.
 - The proxy exposes no streaming-specific handling; it buffers responses up to 2 MiB. Streaming adapters still work if the whole response fits the budget, otherwise they receive `502 response_too_large`.
+
+## 2026-11-15 — P5 complete (append-only leaderboard store)
+
+**Changed files**
+
+- `packages/results/` — new package.
+  - `src/contracts.ts` — `BenchmarkResult` and `LeaderboardEntry` Zod contracts, `buildBenchmarkResult`, `tallyRequirements`, `deriveBenches`, `toLeaderboardEntry`. A `superRefine` enforces internal consistency: denormalized `overall`/`benches`/`tally`/`capsApplied`/version fields must equal the embedded scorecard, and a completed run must exit 0.
+  - `src/store.ts` — `ResultStore` interface (`append`, `get`, `list`, `listByTask`), `ResultStoreError` codes, `compareLeaderboardEntries` (score desc, earlier `createdAt`, then `resultId`), `rankLeaderboard`, `clampLimit`.
+  - `src/local.ts` — `LocalResultStore`: one immutable file per result under `.data/results`, `writeFile` with `flag: "wx"` so a duplicate id cannot overwrite evidence.
+  - `src/upstash.ts` — `UpstashResultStore`: single Lua `EVAL` writes the result document plus `rank:all` and `rank:task:<id>` indexes atomically; an existing id aborts the whole append. Bounded ZRANGE with overscan, per-member validation, `store_unavailable` on transport/HTTP failures without leaking a response body.
+  - `src/seed.ts` — `SeedResultStore`: read-only bundled rows; an invalid row is dropped with a `seed_res_<n>_invalid` diagnostic instead of failing the page.
+  - `src/read.ts` — `readLeaderboard`/`readResult` fallback reads with an explicit `degraded` flag; `createResultStore` factory (Upstash when both env vars exist, local otherwise).
+  - `src/id.ts`, `src/samples.ts`, `src/index.ts`, package/tsconfig/eslint/vitest config.
+  - Tests: `contracts.test.ts`, `ordering.test.ts`, `local.test.ts`, `seed.test.ts`, `upstash.test.ts` — 53 tests.
+- `packages/harness/src/diff.ts` — `buildProducedDiff`: bounded unified diff between the starting repository and the captured repository, LCS-based edit script, byte/file/lines-per-file budgets, `truncated` flag, deterministic file order. `src/diff.test.ts` — 11 tests.
+- `packages/harness/src/benchmark.ts` — `runBenchmark`: adapter run → capture → `evaluateRepository` → diff → `buildBenchmarkResult`. `src/benchmark.test.ts` — 5 tests.
+- `packages/harness/scripts/record-seed.mjs` — records `data/seed-results.json` from real Docker sandbox runs of the fake baseline.
+- `packages/harness/scripts/publish-results.mjs` — organizer publisher: appends recorded results to the configured store, skips duplicates.
+- `data/seed-results.json` — 4 rows (taskboard 99.5 / taskboard 59.9, linkstash 99.3 / linkstash 49.9), each a real recorded sandbox run.
+- `apps/web/src/server/env.ts` — model provider env (`MODEL_PROVIDER`, `MODEL_BASE_URL`, `MODEL_API_KEY` with `OPENROUTER_API_KEY` alias, `MODEL_NAME`, `FALLBACK_MODEL_NAME`, `DEMO_SECOND_MODEL`), Upstash env, `ORIVOXX_DATA_DIR`. Nebius stays as an optional demoted block.
+- `apps/web/src/server/results.ts` — server-only read layer: bundled seed store, store factory, `webLeaderboard`, `webResult`, `getSeedStatus`, fallback policy.
+- `apps/web/src/app/api/v1/leaderboard/route.ts` — `GET /api/v1/leaderboard` with `taskId`/`limit` validation, `no-store`.
+- `apps/web/src/app/api/v1/results/[id]/route.ts` — `GET /api/v1/results/:id`, fixed 404 envelope for unknown and malformed ids.
+- `apps/web/src/app/api/v1/health/route.ts` — non-secret provider and leaderboard status.
+- `apps/web/next.config.ts`, `apps/web/tsconfig.json`, `apps/web/vitest.config.mts`, `apps/web/package.json` — build/runtime wiring.
+- `docs/RESULTS_RETENTION.md` — stored fields, exclusions, store layout, 90-day retention, privacy, API surface.
+- `docs/ARCHITECTURE.md` — results package, read APIs, shipped statuses.
+- `.gitignore` — `.data/`.
+- Tests: web `src/server/results.test.ts`, `leaderboard/route.test.ts`, `results/[id]/route.test.ts` — 18 tests.
+
+**Verification**
+
+- `pnpm -r test` → core 217, benchmarks 63, results 53, web 18, harness 66 passed + 12 Docker tests skipped.
+- `pnpm -r typecheck` → all packages and the web app pass.
+- `pnpm -r lint` → all packages and the web app pass.
+- `pnpm -r build` → all packages and `next build` pass; routes `/api/v1/health`, `/api/v1/leaderboard`, `/api/v1/results/[id]` are dynamic (`ƒ`).
+- `node packages/harness/scripts/record-seed.mjs` → 4 rows written from real Docker sandbox runs.
+- `SeedResultStore` load of `data/seed-results.json` → 4 rows, 0 diagnostics; first row `res_1ab24b38…` has a 3 611-byte diff over 4 files.
+- `node --env-file=.env.local packages/harness/scripts/publish-results.mjs data/seed-results.json` → 4 appended to Upstash, 0 duplicates, 4 rows visible.
+- Production server (`next start`, port 3101) against Upstash:
+  - `GET /api/v1/health` → `{"model":{"provider":"openrouter","name":"openai/gpt-4o-mini","configured":true},"leaderboard":{"store":"upstash","seed":{"available":true,"rows":4}}}`
+  - `GET /api/v1/leaderboard` → `store: "upstash"`, `degraded: false`, 4 rows ordered 99.5, 99.3, 59.9, 49.9.
+  - `GET /api/v1/results/res_1ab24b38…` → 200, `cache-control: no-store`, `x-content-type-options: nosniff`, 9 requirement outcomes, 3 611-byte diff.
+  - Unknown id → 404 `{"error":{"code":"not_found","message":"No result with that id is stored."}}`.
+  - `?limit=999` → 400 `invalid_query` without echoing the input.
+- Dev server without Redis config → `store: "seed"`, 4 rows, so the read path works from seed data alone.
+
+**Decisions**
+
+- The store interface has no update or delete. A re-run produces a new id; stored evidence is immutable. `ResultStoreError` codes are stable and safe to expose.
+- Upstash ZSET score is `-overall` with the leaderboard JSON as the member, so `ZRANGE` is already ranked and the tie-break is completed in memory with a 50-row overscan.
+- The seed file is imported as JSON at build time rather than read from a computed runtime path. The runtime-path version worked but made Next trace the whole project into the server bundle; bundling the JSON keeps the deployment small and independent of `process.cwd()`.
+- Web fallback policy: shared-store error → seed with `degraded: true`; empty local store → seed, labelled sample data; production without a shared store → seed, read-only. An Upstash store that answers with zero rows stays empty (an empty shared store is a real state, not an error).
+- Local development uses one root `.env.local`; `apps/web/.env.local` is a gitignored symlink to it so `next dev` and `next start` see the same values. Vercel uses dashboard env vars.
+- `apps/web/tsconfig.json` no longer aliases `@orivoxx/core` to TypeScript source. The app consumes the built packages (`dist`), which keeps `.js` specifiers in package output resolvable by Turbopack.
+- The web app depends on `@orivoxx/benchmarks` and `@orivoxx/results`; `pnpm -r build` orders the build topologically.
+
+**Known issues**
+
+- The local store scans every result file for `list()`. That is fine for a demo-scale directory; the shared store is indexed.
+- The 90-day retention is documented and enforced by an organizer cleanup, not by a scheduled job. No scheduler exists in this build.
+- The public leaderboard is read-only in deployment by design; writes are organizer-executed.

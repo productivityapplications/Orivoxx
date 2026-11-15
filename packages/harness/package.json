@@ -28,6 +28,7 @@
   "dependencies": {
     "@orivoxx/benchmarks": "workspace:*",
     "@orivoxx/core": "workspace:*",
+    "@orivoxx/results": "workspace:*",
     "zod": "^4.1.12"
   },
   "devDependencies": {
