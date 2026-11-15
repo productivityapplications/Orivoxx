@@ -4,6 +4,7 @@ import { join, relative, resolve, sep } from "node:path";
 
 import {
   classifyPathExclusion,
+  computeRepositoryFingerprint,
   detectLanguage,
   redactSecrets,
   validateEntryPath,
@@ -88,14 +89,7 @@ function containsNul(bytes: Uint8Array): boolean {
 export function fingerprintRepository(
   files: readonly { path: string; fingerprint: string }[],
 ): string {
-  const hash = createHash("sha256");
-  hash.update("orivoxx-repository-v1\n", "utf8");
-
-  for (const file of [...files].sort((left, right) => compareStrings(left.path, right.path))) {
-    hash.update(`${file.path}\n${file.fingerprint}\n`, "utf8");
-  }
-
-  return hash.digest("hex");
+  return computeRepositoryFingerprint(files);
 }
 
 interface WalkEntry {

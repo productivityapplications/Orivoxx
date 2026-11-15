@@ -27,6 +27,23 @@ function comparePaths(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+export function computeRepositoryFingerprint(
+  files: readonly Pick<NormalizedFile, "path" | "fingerprint">[],
+): string {
+  const hash = createHash("sha256");
+  const sortedFiles = [...files].sort((left, right) =>
+    comparePaths(left.path, right.path),
+  );
+
+  hash.update("orivoxx-repository-v1\n", "utf8");
+
+  for (const file of sortedFiles) {
+    hash.update(`${file.path}\n${file.fingerprint}\n`, "utf8");
+  }
+
+  return hash.digest("hex");
+}
+
 export function computeSnapshotFingerprint(
   specText: string,
   files: NormalizedFile[],

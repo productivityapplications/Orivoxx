@@ -2,4 +2,7 @@ export * from "./contracts/index.js";
 export * from "./files.js";
 export * from "./fingerprint.js";
 export * from "./scoring/config.js";
+export * from "./scoring/evaluate.js";
+export * from "./scoring/score.js";
+export * from "./scoring/structural.js";
 export * from "./tasks/index.js";

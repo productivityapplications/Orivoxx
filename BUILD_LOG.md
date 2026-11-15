@@ -107,3 +107,43 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 **Known issues**
 
 - Process adapters still need the P4 Docker executor. Until then only `fake` is runnable end to end.
+
+## 2026-11-15 — P3 complete (deterministic score)
+
+**Changed files**
+
+- `packages/core/src/report/pipeline.ts` — extracted `computeRepositoryFingerprint()` (path + content fingerprints) so the harness and the scorer share one repository identity.
+- `packages/harness/src/capture.ts` — capture fingerprint now delegates to the core function.
+- `packages/benchmarks/src/contracts/score.ts` — Zod result contract: version fields, bench scores, structural metrics, requirement outcomes, caps, unverified IDs. Rejects duplicate requirement IDs, a cap without a reason, and an overall above its cap.
+- `packages/benchmarks/src/scoring/score.ts` — pure `scoreRun()`: severity-weighted bench scores, `UNVERIFIED` earns zero without capping, critical-failure caps at 59.9/49.9, deterministic ordering, version/fingerprint enforcement.
+- `packages/benchmarks/src/scoring/structural.ts` — static import graph: module set, resolved relative edges, Tarjan SCC cycle count, max fan-out, entrypoint-aware orphan ratio, published degradation curves.
+- `packages/benchmarks/src/scoring/evaluate.ts` — static evaluation entry point: core checks → outcomes → structural metrics → score. No produced code is executed.
+- `packages/benchmarks/src/tasks/registry.ts` — registry now rejects a task without at least one spec and one security requirement.
+- Tests: 63 in `@orivoxx/benchmarks`, including determinism, ordering, `UNVERIFIED`, caps, weight changes, version-field rejection, structural thresholds, fixture evaluation, and an import-graph proof test.
+- `docs/BENCHMARKS.md` — published maintainability formula and corrected cap reason names.
+
+**Verification**
+
+- `pnpm --filter @orivoxx/benchmarks test` → 6 files, 63 tests passed.
+- `pnpm --filter @orivoxx/benchmarks typecheck` → exit 0.
+- `pnpm --filter @orivoxx/benchmarks lint` → exit 0.
+- `pnpm --filter @orivoxx/benchmarks build` → exit 0.
+- `pnpm --filter @orivoxx/core test` → 217 tests passed.
+- `pnpm --filter @orivoxx/harness test` → 32 tests passed.
+- Manual score check: TaskBoard compliant `99.5` (spec 100, security 100, maintainability 96.7, no cap); regressed `59.9` (spec 52.4, security 100, maintainability 90, `critical-spec-failure` cap).
+
+**Deterministic proof**
+
+- `import-graph.test.ts` walks the real import graph from `score.ts`, `evaluate.ts`, `structural.ts`, and `round.ts`. It fails if the graph reaches `@orivoxx/harness`, `apps/web`, Nebius, OpenAI, Anthropic, `undici`, `node:http(s)`, `node:net`, `node:dns`, or `node:child_process`; if the source contains `fetch(`, `process.env`, `Math.random`, `Date.now`, `new Date`, or `child_process`; or if it depends on anything outside `@orivoxx/core`, `node:path`, and `zod`.
+
+**Decisions**
+
+- Scores are absolute, one decimal, with bench scores rounded before the weighted sum so the displayed breakdown adds up.
+- `FAIL` and `DRIFT` trigger critical caps; `UNVERIFIED` does not. Missing evidence already earns zero; treating it as a proven critical failure would overstate certainty.
+- Only relative, resolvable JS/TS imports become graph edges. Bare package imports and unresolved aliases are not invented into the graph; unresolved relative imports are reported as warnings.
+- Test and mock files are excluded from the module graph so the maintainability bench measures production structure.
+- Structural degradation is linear between and beyond published thresholds rather than a coarse pass/warn step, so improving a metric always improves the score.
+
+**Known issues**
+
+- The static graph only understands JS/TS-family files and relative imports. Tasks in other languages would need a parser adapter; none are registered.

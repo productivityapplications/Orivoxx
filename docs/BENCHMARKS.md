@@ -147,11 +147,31 @@ overall      = 0.60 * specScore + 0.25 * securityScore + 0.15 * maintainabilityS
 ```
 
 - **Severity weights:** critical 8, high 4, medium 2, low 1.
-- **`pass[req]`:** `1` for `PASS`, `0` for `FAIL` and `UNVERIFIED`. `UNVERIFIED` is reported separately and never counted as a pass.
+- **`pass[req]`:** `1` for `PASS`, `0` for `FAIL`, `DRIFT`, and `UNVERIFIED`. `UNVERIFIED` is reported separately and never counted as a pass.
 - **Normalization:** absolute 0–100, rounded to one decimal. No percentile, rank, or cohort normalization.
-- **Caps:** a critical spec failure caps `overall` at 59.9; a critical security failure caps it at 49.9. The cap is applied after the weighted sum and recorded in `capsApplied`.
-- **Maintainability:** computed from the static import graph. Metrics: dependency cycles, maximum fan-out, orphan-module ratio, and module count. Each metric uses published thresholds in the task's `scoringConfigVersion`.
-- **Versions:** `taskVersion`, `rulesetVersion`, `adapterVersion`, `scoringConfigVersion`, and `repositoryFingerprint` are mandatory on every result.
+- **Caps:** a critical spec `FAIL`/`DRIFT` caps `overall` at 59.9; a critical security `FAIL`/`DRIFT` caps it at 49.9. The cap is applied after the weighted sum and recorded in `capsApplied`. `UNVERIFIED` earns zero but does not trigger a cap: missing evidence is not a proven failure.
+- **Versions:** `taskVersion`, `rulesetVersion`, `adapterVersion`, `scoringConfigVersion`, and `repositoryFingerprint` are mandatory on every result. A result missing any of them is rejected by `ScoreResultSchema` and is not leaderboard-valid.
+
+### Maintainability score (shipped)
+
+The import graph is built statically from JS/TS-family files. Test and mock files are excluded. Only relative imports that resolve to a captured module become edges; bare package imports are external and are not counted. Framework entrypoints (`app/**/{page,layout,route,error,...}`, `pages/**`, `middleware`, `instrumentation`, common `src/index|main` files) are not orphans.
+
+```text
+cycles       = strongly connected components with >1 module, plus self-imports
+maxFanOut    = maximum distinct internal modules imported by one module
+orphanRatio  = modules with zero internal in-edges and not an entrypoint / moduleCount
+moduleCount  = captured JS/TS-family modules, excluding tests and mocks
+```
+
+For `cycles`, `maxFanOut`, and `orphanRatio`, with published `good` and `warn` thresholds:
+
+```text
+metricScore = 100                                       if value <= good
+            = 100 - 30 * (value - good) / (warn - good)  if good < value <= warn
+            = max(0, 70 - 30 * (value - warn) / warn)    if value > warn
+```
+
+`moduleCount` scores 100 inside the published `[min, max]` range, then degrades linearly to 60 at zero modules or at twice the maximum. `maintainabilityScore` is the mean of the four metric scores, rounded to one decimal. Default thresholds (`scoringConfigVersion 1.0.0`): cycles good 0 / warn 1, max fan-out good 8 / warn 12, orphan ratio good 0.10 / warn 0.25, module count 3–60.
 
 ### Worked example
 
@@ -165,7 +185,7 @@ Suppose a task has 10 requirements:
 
 `overall = 0.60 * 81.3 + 0.25 * 75.0 + 0.15 * 90.0 = 48.78 + 18.75 + 13.50 = 81.0`
 
-If the failed requirement is a critical spec failure, the 59.9 cap applies and the result records `capsApplied: ["critical-spec-fail"]`.
+If the failed requirement is a critical spec failure, the 59.9 cap applies and the result records `capsApplied: ["critical-spec-failure"]`.
 
 Weights live in the task's scoring configuration, not in code. The UI must show the per-bench breakdown and the rule-level deductions. A single number without the breakdown is not sufficient evidence.
 

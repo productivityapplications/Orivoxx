@@ -85,6 +85,16 @@ export class TaskRegistry {
         throw new TaskRegistryError(`Duplicate task definition ${key}.`);
       }
 
+      const benches = new Set(
+        parsed.data.ruleset.requirements.map((requirement) => requirement.bench),
+      );
+
+      if (!benches.has("spec") || !benches.has("security")) {
+        throw new TaskRegistryError(
+          `Task ${key} must declare at least one spec and one security requirement.`,
+        );
+      }
+
       seen.add(key);
       validated.push(parsed.data);
 
