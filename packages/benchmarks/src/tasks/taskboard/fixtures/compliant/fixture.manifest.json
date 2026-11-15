@@ -1,0 +1,14 @@
+{
+  "name": "taskboard-compliant",
+  "version": "1",
+  "specPath": "PROJECT_SPEC.md",
+  "expectedRunState": "COMPLETE",
+  "expectedGate": "PASS",
+  "expectedRequirementStatuses": {
+    "REQ-AUTH-001": "PASS",
+    "REQ-ERR-001": "PASS",
+    "REQ-PATH-001": "PASS",
+    "REQ-DEP-001": "PASS"
+  },
+  "knownDeviations": []
+}

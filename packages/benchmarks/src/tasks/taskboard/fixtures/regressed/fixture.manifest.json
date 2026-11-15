@@ -1,0 +1,23 @@
+{
+  "name": "taskboard-regressed",
+  "version": "1",
+  "specPath": "PROJECT_SPEC.md",
+  "expectedRunState": "COMPLETE",
+  "expectedGate": "BLOCKED",
+  "expectedRequirementStatuses": {
+    "REQ-AUTH-001": "FAIL",
+    "REQ-ERR-001": "FAIL",
+    "REQ-PATH-001": "PASS",
+    "REQ-DEP-001": "PASS"
+  },
+  "knownDeviations": [
+    {
+      "requirementId": "REQ-AUTH-001",
+      "note": "Handler reads project by id without ownership check."
+    },
+    {
+      "requirementId": "REQ-ERR-001",
+      "note": "Handler lacks try/catch and leaks errors."
+    }
+  ]
+}

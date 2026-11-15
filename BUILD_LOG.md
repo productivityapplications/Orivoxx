@@ -38,3 +38,40 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - Updated `AI_HANDOFF.md`.
 - Recorded decisions above.
 - Next: P1 `packages/benchmarks`.
+
+## 2026-11-15 — P1 complete (`packages/benchmarks`)
+
+**Changed files**
+
+- `packages/benchmarks/` new workspace package: `package.json`, `tsconfig.json`, `tsconfig.typecheck.json`, `eslint.config.mjs`, `vitest.config.ts`.
+- `src/contracts/scoring.ts`, `src/contracts/task.ts`, `src/contracts/index.ts` — Zod contracts for semver, bench/severity weights, structural thresholds, scoring config, task manifest, ruleset, task definition, task summary.
+- `src/fingerprint.ts` — canonical JSON + SHA-256 ruleset fingerprint.
+- `src/tasks/build.ts` — deterministic-only enforcement, bench assignment validation, spec/starting-file agreement, ruleset construction.
+- `src/tasks/registry.ts` — deterministic registry with semver ordering, pinned tasks, duplicate/empty rejection.
+- `src/tasks/taskboard/` — task spec (9 deterministic requirements), starting repo, compliant/regressed fixtures, generated TS.
+- `src/tasks/linkstash/` — second task (12 requirements: 9 spec, 3 security), starting repo, compliant/regressed fixtures, generated TS.
+- `src/files.ts` — normalized project files: path validation, exclusion, secret redaction, fingerprint, language detection.
+- `src/scoring/config.ts` — `scoringConfigVersion 1.0.0`: spec 60 / security 25 / maintainability 15, severity 8/4/2/1, caps 59.9/49.9, structural thresholds.
+- `scripts/generate-task-assets.mjs` — regenerates task asset modules from specs/starting/fixtures.
+- `docs/BENCHMARK_TASK_TEMPLATE.md` — task authoring contract.
+- `packages/core/src/archive/redact.ts` — added OpenRouter key redaction category (`sk-or-v1-…`), needed because produced/starting files may embed keys.
+
+**Verification**
+
+- `pnpm --filter @orivoxx/core test` → 16 files, 217 tests passed.
+- `pnpm --filter @orivoxx/benchmarks test` → 2 files, 26 tests passed.
+- `pnpm --filter @orivoxx/benchmarks typecheck` → exit 0.
+- `pnpm --filter @orivoxx/benchmarks lint` → exit 0.
+- `pnpm --filter @orivoxx/benchmarks build` → exit 0, dist emitted (gitignored).
+
+**Decisions**
+
+- TaskBoard's original semantic auth requirement is projected to a deterministic `text_contains` marker (`assertProjectOwner`), so the benchmark keeps a model-free score path. Recorded in the task spec preamble.
+- The root `PROJECT_SPEC.md` stays historical; each task owns its own `PROJECT_SPEC.md` inside `packages/benchmarks`.
+- Generated task assets are checked in so the web app and CLI do not need the generator at runtime; the generator is the source of truth and is re-run whenever fixtures change.
+- `tsconfig.typecheck.json` maps `@orivoxx/core` to source with `rootDir: ../..`; `tsconfig.json` (build) resolves the built package. This avoids emitting core files into the benchmarks package.
+- Fixture and starting directories are excluded from typecheck/build: they are untrusted benchmark inputs, not workspace source, and they intentionally contain `next/server` imports and unsafe patterns.
+
+**Known issues**
+
+- `packages/core` build currently emits `.js/.d.ts/.map` into `src` when run without a clean; stray files were deleted. Root cause is the `prebuild` chain invoking `tsc` with a `rootDir` that resolves oddly under `pnpm -r`; tracked for P3 when the package build graph is revisited.

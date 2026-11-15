@@ -4,6 +4,7 @@ type RedactionCategory =
   | "private_key"
   | "aws_access_key"
   | "github_token"
+  | "openrouter_key"
   | "bearer_token"
   | "env_secret_assignment";
 
@@ -17,6 +18,7 @@ const PEM_PRIVATE_KEY_PATTERN =
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g;
 const AWS_ACCESS_KEY_PATTERN = /\bAKIA[0-9A-Z]{16}\b/g;
 const GITHUB_TOKEN_PATTERN = /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}\b/g;
+const OPENROUTER_KEY_PATTERN = /\bsk-or-v1-[A-Za-z0-9]{32,}\b/g;
 const BEARER_TOKEN_PATTERN = /\bBearer\s+[A-Za-z0-9._\-]{20,}/g;
 const ENV_SECRET_ASSIGNMENT_PATTERN =
   /\b[A-Z][A-Z0-9_]*(?:API_?KEY|SECRET|TOKEN|PASSWORD|PASSWD)\s*=\s*["']?(?!\[REDACTED:)[^\s"']{8,}["']?/g;
@@ -52,6 +54,11 @@ const RULES: readonly RedactionRule[] = [
     category: "github_token",
     pattern: GITHUB_TOKEN_PATTERN,
     replace: () => token("github_token"),
+  },
+  {
+    category: "openrouter_key",
+    pattern: OPENROUTER_KEY_PATTERN,
+    replace: () => token("openrouter_key"),
   },
   {
     category: "bearer_token",
