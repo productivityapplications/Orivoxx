@@ -30,10 +30,14 @@ afterEach(async () => {
   );
 });
 
-function runRequest(body: unknown, contentType = "application/json"): Request {
+function runRequest(
+  body: unknown,
+  contentType = "application/json",
+  headers: Record<string, string> = { origin: "http://localhost" },
+): Request {
   return new Request("http://localhost/api/v1/runs", {
     method: "POST",
-    headers: { "content-type": contentType },
+    headers: { "content-type": contentType, ...headers },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
@@ -92,6 +96,58 @@ describe("POST /api/v1/runs", () => {
 
     expect(tooLarge.status).toBe(413);
     expect((await tooLarge.json()).error.code).toBe("body_too_large");
+  });
+
+  it("rejects a foreign origin and a missing origin", async () => {
+    const foreign = await runsRoute(
+      runRequest({ taskId: "taskboard", variant: "compliant" }, "application/json", {
+        origin: "https://evil.example",
+      }),
+    );
+
+    expect(foreign.status).toBe(403);
+    expect((await foreign.json()).error.code).toBe("forbidden_origin");
+
+    const missing = await runsRoute(
+      new Request("http://localhost/api/v1/runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ taskId: "taskboard", variant: "compliant" }),
+      }),
+    );
+
+    expect(missing.status).toBe(403);
+    expect((await missing.json()).error.code).toBe("forbidden_origin");
+  });
+
+  it("fails closed in production when rate limiting is unavailable", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    const response = await runsRoute(runRequest({ taskId: "taskboard", variant: "compliant" }));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      error: { code: "rate_limit_unavailable" },
+    });
+  });
+
+  it("echoes an inbound request id and generates one otherwise", async () => {
+    const directory = await resultsDirectory();
+    vi.stubEnv("ORIVOXX_DATA_DIR", directory);
+
+    const withId = await runsRoute(
+      runRequest({ taskId: "taskboard", variant: "compliant" }, "application/json", {
+        origin: "http://localhost",
+        "x-request-id": "test-request-id-1234",
+      }),
+    );
+
+    expect(withId.headers.get("x-request-id")).toBe("test-request-id-1234");
+    expect((await withId.json()).requestId).toBe("test-request-id-1234");
+
+    const generated = await runsRoute(runRequest({ taskId: "taskboard", variant: "compliant" }));
+
+    expect(generated.headers.get("x-request-id")).toMatch(/^[a-f0-9-]{36}$/);
   });
 
   it("rejects malformed JSON without a stack trace", async () => {

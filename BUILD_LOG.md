@@ -332,3 +332,35 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 
 - `/docs` is linked from nav but arrives in P9.
 - No explanation surface in this build; no model call is made from any page.
+
+## 2026-11-15 — P8 complete (hardening)
+
+**Files**
+
+- `src/server/rate-limit.ts` — `@upstash/ratelimit` sliding window (10 requests / 10 min), 2 s timeout, hashed client id (no raw IP), fail-closed in production when the shared limiter is missing or unreachable.
+- `src/server/origin.ts` — same-origin check for mutating requests, including `APP_BASE_URL` and forwarded host/proto, plus `sec-fetch-site`.
+- `src/server/runs.ts` — two-run concurrency ceiling per instance.
+- `src/app/api/v1/runs/route.ts` — origin → rate limit → 4 KiB body → schema → task → slot; safe envelopes with `requestId`; rate headers.
+- `src/middleware.ts` — `x-request-id` on every request/response.
+- `next.config.ts` — CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, referrer policy, permissions policy.
+- Tests: `hardening.test.ts` + route abuse tests (origin, production fail-closed, request id, concurrency).
+
+**Verification**
+
+- Web: 7 files / 44 tests pass; typecheck/lint/build pass.
+- Production headers: CSP, HSTS, nosniff, DENY, referrer, permissions, `x-request-id` present.
+- Cross-origin POST → 403 `forbidden_origin`; missing Origin → 403.
+- Valid POST → 201, `x-request-id` echoed, `x-ratelimit-remaining` decreasing; 11th request → 429 `rate_limited` with `retry-after`.
+- Rate-limit keys deleted after the probe.
+
+**Decisions**
+
+- Production without Upstash returns 503 `rate_limit_unavailable` for mutations rather than allowing unlimited runs. Read routes stay available.
+- Client identifiers are SHA-256 hashes; no raw IP is stored.
+- There is no explanation endpoint in this build, so the explanation consent gate has nothing to gate. The UI never calls a model.
+- The rate limiter fails open only on its own 2 s timeout path inside `@upstash/ratelimit`; the wrapper treats a thrown error as unavailable, and a missing limiter is denied in production. The 2 s timeout is a bounded fallback, not a silent bypass: response headers expose remaining quota.
+
+**Known issues**
+
+- Two concurrent fake runs per server instance is a coarse limit; Vercel may run several instances.
+- CSP allows inline scripts (`'unsafe-inline'`) because Next injects inline bootstrapping; a nonce-based policy is future work.

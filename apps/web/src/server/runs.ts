@@ -18,6 +18,30 @@ export interface FakeRunOutput {
   store: ResultStoreKind;
 }
 
+const MAX_CONCURRENT_RUNS = 2;
+let activeRuns = 0;
+
+/** Bounds concurrent fake runs inside one server instance. */
+export function acquireFakeRunSlot(): (() => void) | null {
+  if (activeRuns >= MAX_CONCURRENT_RUNS) {
+    return null;
+  }
+
+  activeRuns += 1;
+  let released = false;
+
+  return () => {
+    if (!released) {
+      released = true;
+      activeRuns -= 1;
+    }
+  };
+}
+
+export function activeFakeRuns(): number {
+  return activeRuns;
+}
+
 /**
  * The public, self-serve path. It executes no model and no agent: the fake
  * adapter materializes a checked-in fixture, the deterministic engine scores

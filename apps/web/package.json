@@ -21,6 +21,8 @@
     "@orivoxx/core": "workspace:*",
     "@orivoxx/harness": "workspace:*",
     "@orivoxx/results": "workspace:*",
+    "@upstash/ratelimit": "^2.2.1",
+    "@upstash/redis": "^1.41.0",
     "@xyflow/react": "^12.11.0",
     "next": "16.4.2",
     "openai": "^6.10.0",

@@ -1,7 +1,16 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { runFakeBenchmark } from "@/server/runs";
+import { checkSameOrigin } from "@/server/origin";
+import {
+  checkRunRateLimit,
+  clientIdentifier,
+  rateLimitHeaders,
+  type RateLimitOutcome,
+} from "@/server/rate-limit";
+import { acquireFakeRunSlot, runFakeBenchmark } from "@/server/runs";
 import { taskDetail } from "@/server/tasks";
 
 export const dynamic = "force-dynamic";
@@ -17,26 +26,79 @@ const requestSchema = z
   })
   .strict();
 
-const HEADERS = {
+const SAFE_HEADERS = {
   "cache-control": "no-store",
   "x-content-type-options": "nosniff",
 } as const;
 
-function error(code: string, message: string, status: number): NextResponse {
-  return NextResponse.json({ error: { code, message } }, { status, headers: HEADERS });
+function requestIdOf(request: Request): string {
+  const inbound = request.headers.get("x-request-id");
+
+  if (inbound !== null && /^[A-Za-z0-9-]{8,64}$/.test(inbound)) {
+    return inbound;
+  }
+
+  return randomUUID();
+}
+
+function error(
+  requestId: string,
+  code: string,
+  message: string,
+  status: number,
+  extra: Record<string, string> = {},
+): NextResponse {
+  return NextResponse.json(
+    { error: { code, message, requestId } },
+    { status, headers: { ...SAFE_HEADERS, ...extra, "x-request-id": requestId } },
+  );
+}
+
+function rateLimitMessage(outcome: RateLimitOutcome): string {
+  return outcome.reason === "unavailable"
+    ? "Run submission is temporarily unavailable because shared rate limiting is not reachable."
+    : "Too many run submissions from this client. Try again later.";
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const requestId = requestIdOf(request);
+
+  const origin = checkSameOrigin(request, process.env.APP_BASE_URL);
+
+  if (!origin.ok) {
+    return error(
+      requestId,
+      "forbidden_origin",
+      "Mutating requests must come from the same origin.",
+      403,
+    );
+  }
+
   const contentType = request.headers.get("content-type") ?? "";
 
   if (!contentType.toLowerCase().startsWith("application/json")) {
-    return error("invalid_content_type", "Send an application/json body.", 415);
+    return error(requestId, "invalid_content_type", "Send an application/json body.", 415);
   }
 
+  const outcome = await checkRunRateLimit(clientIdentifier(request));
+
+  if (!outcome.allowed) {
+    const status = outcome.reason === "limited" ? 429 : 503;
+
+    return error(
+      requestId,
+      outcome.reason === "limited" ? "rate_limited" : "rate_limit_unavailable",
+      rateLimitMessage(outcome),
+      status,
+      rateLimitHeaders(outcome, { retryAfter: true }),
+    );
+  }
+
+  const rateHeaders = rateLimitHeaders(outcome);
   const raw = await request.text();
 
   if (Buffer.byteLength(raw, "utf8") > BODY_LIMIT_BYTES) {
-    return error("body_too_large", "The request body is too large.", 413);
+    return error(requestId, "body_too_large", "The request body is too large.", 413, rateHeaders);
   }
 
   let parsed: unknown;
@@ -44,21 +106,35 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return error("invalid_input", "The request body is not valid JSON.", 400);
+    return error(requestId, "invalid_input", "The request body is not valid JSON.", 400, rateHeaders);
   }
 
   const input = requestSchema.safeParse(parsed);
 
   if (!input.success) {
     return error(
+      requestId,
       "invalid_input",
       "taskId must be a known kebab-case task and variant must be compliant or regressed.",
       400,
+      rateHeaders,
     );
   }
 
   if (taskDetail(input.data.taskId) === null) {
-    return error("invalid_input", "That task does not exist.", 400);
+    return error(requestId, "invalid_input", "That task does not exist.", 400, rateHeaders);
+  }
+
+  const release = acquireFakeRunSlot();
+
+  if (release === null) {
+    return error(
+      requestId,
+      "too_many_runs",
+      "Two runs are already in progress on this instance. Try again shortly.",
+      429,
+      rateHeaders,
+    );
   }
 
   try {
@@ -72,8 +148,16 @@ export async function POST(request: Request): Promise<NextResponse> {
         overall: result.overall,
         createdAt: result.createdAt,
         store,
+        requestId,
       },
-      { status: 201, headers: HEADERS },
+      {
+        status: 201,
+        headers: {
+          ...SAFE_HEADERS,
+          ...rateHeaders,
+          "x-request-id": requestId,
+        },
+      },
     );
   } catch (cause) {
     const code =
@@ -82,13 +166,20 @@ export async function POST(request: Request): Promise<NextResponse> {
         : "run_failed";
 
     if (code === "invalid_run_input" || code === "unknown_task") {
-      return error("invalid_input", "That task or fixture variant does not exist.", 400);
+      return error(requestId, "invalid_input", "That task or fixture variant does not exist.", 400);
     }
 
     if (code === "duplicate_result") {
-      return error("duplicate_result", "The result already exists.", 409);
+      return error(requestId, "duplicate_result", "The result already exists.", 409);
     }
 
-    return error("run_failed", "The benchmark run could not be completed. Try again.", 500);
+    return error(
+      requestId,
+      "run_failed",
+      "The benchmark run could not be completed. Try again.",
+      500,
+    );
+  } finally {
+    release();
   }
 }
