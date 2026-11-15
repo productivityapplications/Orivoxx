@@ -19,10 +19,11 @@
   },
   "scripts": {
     "prebuild": "pnpm --filter @orivoxx/core build && pnpm --filter @orivoxx/benchmarks build",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/write-proxy-package.mjs",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.typecheck.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "sandbox:build": "pnpm build && node scripts/build-sandbox.mjs"
   },
   "dependencies": {
     "@orivoxx/benchmarks": "workspace:*",

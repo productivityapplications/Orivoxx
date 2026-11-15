@@ -147,3 +147,60 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 **Known issues**
 
 - The static graph only understands JS/TS-family files and relative imports. Tasks in other languages would need a parser adapter; none are registered.
+
+## 2026-11-15 — P4 complete (isolated sandbox runner)
+
+**Changed files**
+
+- `packages/harness/src/sandbox/docker.ts` — `SandboxRunner` (alias of `AgentExecutor`) and `DockerExecutor`: image preflight, workspace ownership, network setup, proxy sidecar lifecycle with readiness probe, `spawn`-based container run, timeout kill, bounded output, guaranteed cleanup. `ensureSandboxNetworks()` exported for tests and tooling.
+- `packages/harness/src/sandbox/proxy.ts` — allowlisted model proxy: `/v1`-only path allowlist, traversal/encoded-traversal rejection, GET/POST only, 1 MiB request budget (declared and streamed), 2 MiB response budget, 60 s upstream timeout, credential strip/inject, header allowlist, pinned target origin, `no-store`.
+- `packages/harness/src/sandbox/proxy-server.ts` — sidecar entry point reading `MODEL_BASE_URL`, `MODEL_API_KEY`, `PROXY_PORT`.
+- `packages/harness/src/sandbox/index.ts` — sandbox exports.
+- `packages/harness/docker/sandbox.Dockerfile` — `node:24-bookworm-slim`, ca-certificates, git, python3 + venv, uid/gid 10001, `HOME=/tmp`.
+- `packages/harness/scripts/build-sandbox.mjs` — image build; `packages/harness/scripts/write-proxy-package.mjs` — writes `dist/sandbox/package.json` (`type: module`) so the sidecar runs the ESM build from a read-only mount.
+- `packages/harness/package.json` — `sandbox:build` script; build now emits the proxy package marker.
+- `packages/harness/src/errors.ts` — sandbox error codes (`sandbox_unavailable`, `sandbox_image_missing`, `sandbox_proxy_misconfigured`, `sandbox_proxy_build_missing`, `sandbox_run_failed`).
+- `packages/harness/src/sandbox/proxy.test.ts` — 18 unit tests.
+- `packages/harness/src/sandbox/docker.integration.test.ts` — 12 Docker tests gated by `ORIVOXX_DOCKER_TESTS=1`.
+- `docs/SANDBOX.md` — container profile, network topology, proxy policy, workspace lifecycle, timeouts, operations, test evidence.
+- `docs/ARCHITECTURE.md` — shipped-status corrections for `packages/harness`, `packages/benchmarks`, `apps/runner` (superseded), scoring boundary, execution flow.
+
+**Verification**
+
+- `pnpm --filter @orivoxx/harness sandbox:build` → image `orivoxx/sandbox:1.0.0` built (id `771393837211`).
+- `pnpm --filter @orivoxx/harness test` → 4 files, 50 tests passed; 12 integration tests skipped without the gate.
+- `ORIVOXX_DOCKER_TESTS=1 pnpm --filter @orivoxx/harness test` → 5 files, 62 tests passed in ~39 s.
+- `pnpm --filter @orivoxx/harness typecheck` → exit 0.
+- `pnpm --filter @orivoxx/harness lint` → exit 0.
+- `pnpm --filter @orivoxx/harness build` → exit 0; `dist/sandbox/proxy-server.js` + `package.json` present.
+- Manual end-to-end run (agent writes the TaskBoard fixture inside Docker, `network: none`): status `completed`, exit `0`, 1020 ms, 8 captured files / 7 904 bytes, score `99.5` (spec 100, security 100, maintainability 96.7), 9/9 `PASS`, no cap, fingerprint `b6a8435d66ca568f…`.
+- Post-run: `docker ps -a --filter name=orivoxx-` empty; no host files created outside the workspace.
+
+**Deterministic boundary proof**
+
+- The scoring import-graph test still passes. Adding the sandbox did not add any import from `packages/benchmarks` to `packages/harness`; `evaluateRepository` consumes `NormalizedFile[]` produced by `toNormalizedFiles(output.files)`.
+- The integration test asserts the whole loop: Docker run → capture → score, and that `output.repositoryFingerprint` equals `score.repositoryFingerprint`.
+
+**Sandbox proofs**
+
+- Secrets: container env contains only `HOME`, `TMPDIR`, `NODE_ENV`, plus schema-allowlisted adapter variables. `MODEL_API_KEY`, `MODEL_BASE_URL`, and `OPENROUTER_API_KEY` are absent; host secret values never appear in the dump. `OPENAI_API_KEY` inside the container is exactly the `orivoxx-sandbox-proxy` sentinel.
+- Network: with `network: "model-proxy"`, `/healthz` returns 200, a proxied POST reaches a sibling fake-provider container at `/api/v1/chat/completions` with `Authorization: Bearer <provider key>` injected host-side, while a direct request to that sibling container and a raw `1.1.1.1` request both fail.
+- Filesystem: writes to `/etc/passwd`, `/escape-root.txt`, and `/workspace/../escape.txt` return `EROFS`/`EACCES`/`EPERM`; `/tmp` is writable; nothing appears on the host.
+- Quotas: 2 s timeout kills a 120 s run (`timedOut`, no exit code, container removed); 4 KiB output budget truncates a 2 MiB stream; `pids-limit 64` yields `EAGAIN` for a 300-process fork loop; memory 512 MB, 1 CPU, 64 MB `/dev/shm`, 256 file descriptors.
+- Cleanup: no `orivoxx-run-*` or `orivoxx-proxy-*` container survives any test.
+
+**Decisions**
+
+- `SandboxRunner` is exported as the platform's only permitted executor type; `DockerExecutor` is its single implementation. This satisfies the plan's "SandboxRunner interface plus Docker implementation" without inventing a parallel abstraction.
+- The proxy sidecar joins the internal network **and** the egress network; the agent joins only the internal network. The plan wording said both containers on one network; splitting them is what makes "no unrestricted egress" testable. Recorded here as the authoritative topology.
+- The workspace is an ephemeral host bind mount (chowned to 10001) rather than a tmpfs, because a container-owned tmpfs cannot be captured after exit. See `docs/SANDBOX.md` §5. Root filesystem is still `--read-only` with a bounded tmpfs `/tmp`.
+- Proxy request mapping is `/v1/<suffix>` → `${MODEL_BASE_URL}/<suffix>`, so adapters use the standard OpenAI base URL and the provider base path (e.g. `/api/v1` on OpenRouter) is configuration, not adapter code.
+- Proxy errors are fixed codes with no provider body, no stack trace, and no key material. Provider error statuses are passed through unchanged so an adapter can react to a 429.
+- Container traffic cannot reach `host.docker.internal`: host-gateway is deliberately not added, so a compromised agent cannot probe host services.
+- Integration tests are gated by `ORIVOXX_DOCKER_TESTS=1` but are part of the required verification for this phase and for any sandbox change.
+
+**Known issues**
+
+- The image ships Python 3.12 and Node 24 with no package manager cache. A `python-openrouter` adapter that wants `requests` must use the standard library or the image must be extended and versioned; adapter dependencies are pinned in the image, not installed at run time.
+- Docker Desktop on macOS/Windows may refuse `chown` on bind mounts; `prepareWorkspace` falls back to `chmod -R a+rwX`. Linux organizer machines are the supported path.
+- The proxy exposes no streaming-specific handling; it buffers responses up to 2 MiB. Streaming adapters still work if the whole response fits the budget, otherwise they receive `502 response_too_large`.

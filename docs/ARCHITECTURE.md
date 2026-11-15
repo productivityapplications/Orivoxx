@@ -1,6 +1,6 @@
 # Orivoxx — Target Architecture
 
-**Status:** target design for the HackCulture AI Global Hackathon build. This document separates what exists in the repository today from what is planned. It does not describe the benchmark layer as shipped.
+**Status:** target design for the HackCulture AI Global Hackathon build. This document separates what exists in the repository today from what is planned.
 
 **Legend:** `[SHIPPED]` = implemented and covered by the current source/tests. `[PARTIAL]` = contracts or scaffolding exist but the runtime path does not. `[PLANNED]` = design only; no implementation in this repository yet.
 
@@ -9,8 +9,19 @@
 ```text
 apps/web                         Next.js 16 shell
   ├── /                          dark landing placeholder
-  ├── /api/v1/health             safe provider/version status
-  └── src/server/nebius          server-only smoke adapter (pingModel)
+  └── /api/v1/health             safe provider/version status
+
+packages/benchmarks              versioned benchmark tasks and the deterministic score
+  ├── tasks                      registry, TaskBoard, Linkstash, fixtures, generated assets
+  ├── scoring                    scoreRun, static structural metrics, evaluateRepository
+  ├── contracts                  task/ruleset/scoring-config/score Zod schemas
+  └── fingerprint                canonical ruleset fingerprint
+
+packages/harness                 the only component that executes an agent
+  ├── adapters                   adapter contract, registry, fake baseline
+  ├── sandbox                    Docker executor, allowlisted model proxy
+  ├── capture                    bounded artifact capture + repository fingerprint
+  └── run                        run lifecycle, command/env validation, summaries
 
 packages/core                    pure TypeScript verification engine
   ├── archive                    bounded in-memory ZIP intake, path checks, redaction
@@ -28,10 +39,10 @@ packages/core                    pure TypeScript verification engine
 
 What this means in practice:
 
-- The scoring **rubric** exists: requirements, deterministic checks, evidence, verdicts, gate.
-- The scoring **service** does not: there is no HTTP route that runs the engine over a submitted repository, no benchmark task registry, and no score output.
-- The graph **contract** exists, but the graph builder and graph metrics do not.
-- The Nebius adapter is a smoke test only. It is not the semantic verification service or the explanation service.
+- The scoring **rubric** exists: versioned tasks, deterministic checks, evidence, verdicts, and a numeric score.
+- The scoring **service** does not: there is no HTTP route that runs the engine over a submitted repository, and there is no leaderboard API yet.
+- The **execution path** exists for organizer-run benchmarks: `packages/harness` runs an adapter in Docker and returns a normalized repository. The public fake-run path and the result explorer are still to be built.
+- The Nebius adapter is demoted to an optional provider; OpenRouter is the featured provider. Neither is in the score path.
 
 ## 2. Target system
 
@@ -74,42 +85,41 @@ What this means in practice:
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Planned package responsibilities
+### Package responsibilities
 
 | Component | Responsibility | Status |
 |---|---|---|
-| `packages/benchmarks` | Versioned task registry, ruleset manifests, scoring configuration, leaderboard aggregation. | `[PLANNED]` |
-| `packages/harness` | Agent adapter interface, run lifecycle, sandbox contract, artifact capture, adapter versioning. | `[PLANNED]` |
-| `apps/runner` | Optional isolated execution service. Runs the agent and its tools in a sandbox with CPU/time/network/filesystem quotas. | `[PLANNED]` |
+| `packages/benchmarks` | Versioned task registry, ruleset manifests, scoring configuration, leaderboard aggregation. | `[PARTIAL]` — tasks, rulesets, scoring config shipped; leaderboard aggregation is P5 |
+| `packages/harness` | Agent adapter interface, run lifecycle, Docker sandbox, allowlisted model proxy, artifact capture, adapter versioning. | `[SHIPPED]` |
+| `apps/runner` | Optional isolated execution service. | `[SUPERSEDED]` — real runs execute through `packages/harness` on the organizer machine |
 | `apps/web` | Public benchmark UI, run submission, result explorer, leaderboard, explanation requests. | `[PARTIAL]` — shell and health only |
 | `packages/core` | Deterministic scoring rubric over the captured repository. | `[SHIPPED]` — engine only |
 
 ## 3. Execution flow
 
-Target flow for one benchmark run:
+Flow for one organizer-run benchmark run:
 
-1. **Submit agent.** The user selects a benchmark task and supplies an agent configuration: adapter ID, command/model configuration, and any adapter-specific settings.
-2. **Select benchmarks.** The task registry resolves the task version, ruleset version, and scoring configuration. These versions are recorded before execution.
-3. **Provision sandbox.** The runner starts an isolated environment with the task's starting repository (usually just `PROJECT_SPEC.md` and an empty source tree), resource limits, and no access to platform secrets.
-4. **Run agent.** The adapter launches the agent and records stdout/stderr metadata, exit status, timing, and the final repository artifact.
-5. **Capture produced repository.** The artifact is normalized (path validation, denylist filtering, secret redaction, size limits) using the same archive rules as the existing archive-intake module.
-6. **Score.** `packages/core` parses the task spec and runs the deterministic ruleset against the captured repository. No produced code is executed.
-7. **Aggregate.** The scoring service maps rule outcomes to a benchmark score using the task's versioned scoring configuration. The result records task/ruleset/adapter versions and the artifact fingerprint.
-8. **Publish.** The result is written to the leaderboard store and exposed in the result explorer with per-rule evidence.
+1. **Select the task and adapter.** The task registry resolves the task version, ruleset version, and scoring configuration. These versions are recorded before execution.
+2. **Provision the sandbox.** `packages/harness` creates an empty run workspace, writes the task's starting repository, and starts a hardened container with no platform secrets (`docs/SANDBOX.md`).
+3. **Run the agent.** The adapter launches the agent by argv inside the container. Stdout/stderr summaries are bounded and redacted; status, exit code, and timing are recorded.
+4. **Capture the produced repository.** After the container exits, the workspace is normalized (path validation, denylist filtering, secret redaction, size ceilings) and fingerprinted.
+5. **Score.** `packages/benchmarks` runs the deterministic ruleset and the static import graph over the captured text. No produced code is executed.
+6. **Aggregate.** `scoreRun()` maps rule outcomes to the task score. The result records task/ruleset/adapter/scoring-config versions and the repository fingerprint.
+7. **Publish.** The result is written to the leaderboard store and exposed in the result explorer with per-rule evidence.
 
 ### What is deliberately synchronous vs. queued
 
-The current scoring engine is synchronous and stateless. The benchmark harness cannot be: agent runs can take minutes and need isolation. The target design therefore introduces a run queue and a runner process. The queue and runner are `[PLANNED]`; no queue exists today.
+The scoring engine is synchronous and stateless `[SHIPPED]`. Real benchmark runs are not: an agent run takes minutes and needs isolation, so it runs as a separate organizer-executed command that writes a result to the store `[SHIPPED]` in `packages/harness`. A public run queue is `[PLANNED]`; nothing in the public web app executes an agent today.
 
 ## 4. Scoring boundary
 
-The target scoring function is:
+The scoring function is:
 
 ```text
-score = f(taskVersion, specText, rulesetVersion, capturedRepository, scoringConfigVersion)
+score = f(taskVersion, rulesetVersion, capturedRepository, scoringConfigVersion)
 ```
 
-The existing engine implements the deterministic inputs — task spec, check declarations, captured files — and produces requirement statuses, evidence, and a gate. `scoringConfigVersion` and numeric aggregation are planned.
+`packages/benchmarks` implements it: `scoreRun()` maps deterministic requirement outcomes and static structural metrics to a 0–100 score using the task's versioned scoring configuration. `evaluateRepository()` runs the checks and the static import graph first. The model is not an input.
 
 Properties:
 
@@ -127,10 +137,10 @@ There are two distinct execution contexts, and the documentation must keep them 
 
 | Context | What runs there | What it may access | What it must never access |
 |---|---|---|---|
-| **Harness sandbox** `[PLANNED]` | The agent process and its declared tools | The task's starting repository, a temporary workspace, bounded CPU/time/network policy | Platform API keys, the leaderboard store, other runs' artifacts, the host filesystem |
+| **Harness sandbox** `[SHIPPED]` | The agent process and its declared tools | The task's starting repository, an ephemeral run workspace, one allowlisted model proxy | Platform API keys, the leaderboard store, other runs' artifacts, the host filesystem, unrestricted network |
 | **Scoring engine** `[SHIPPED]` | Pure TypeScript analysis | The captured, normalized repository in memory | The network, a shell, the agent process, persistent storage |
 
-This separation is a strength, not a limitation. The scoring engine cannot be compromised by malicious code in the agent's output because it never executes that code. It parses source with the TypeScript parser API and evaluates declarative checks. The harness is the only component that executes anything, and it does so in a disposable sandbox with explicit quotas.
+This separation is a strength, not a limitation. The scoring engine cannot be compromised by malicious code in the agent's output because it never executes that code. It parses source with the TypeScript parser API and evaluates declarative checks. The harness is the only component that executes anything, and it does so in a disposable sandbox with explicit quotas. See `docs/SANDBOX.md` for the container profile, the network topology, and the proxy allowlist.
 
 The existing engine rules still apply to the scoring engine:
 
@@ -140,7 +150,7 @@ The existing engine rules still apply to the scoring engine:
 - No uploaded archive bytes, source, prompts, or model responses are logged.
 - Public AI endpoints require shared rate limiting before launch. The current repo has no rate limiter; this remains a launch gate.
 
-> **Approval required:** adding a harness that executes agents is a deliberate change from the verifier-era "no uploaded code execution" rule. That rule continues to apply to the **scoring engine**. The sandbox boundary above is the proposed replacement for the harness. It must be reviewed and approved before the code pass begins.
+> **Approved:** adding a harness that executes agents was approved in Phase 0 and is recorded in `AGENTS.md`. That rule continues to apply to the **scoring engine**, which never executes produced code. The sandbox boundary above is the shipped replacement for the harness.
 
 ## 6. What we keep from the verifier era
 

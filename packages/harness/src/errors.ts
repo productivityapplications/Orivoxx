@@ -11,6 +11,11 @@ export const HARNESS_ERROR_CODES = [
   "no_eligible_files",
   "executor_required",
   "workspace_io_error",
+  "sandbox_unavailable",
+  "sandbox_image_missing",
+  "sandbox_proxy_misconfigured",
+  "sandbox_proxy_build_missing",
+  "sandbox_run_failed",
 ] as const;
 
 export type HarnessErrorCode = (typeof HARNESS_ERROR_CODES)[number];
