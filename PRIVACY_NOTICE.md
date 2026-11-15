@@ -1,13 +1,47 @@
-# Orivoxx Privacy & Source-Processing Notice
+# Orivoxx Privacy & Data-Processing Notice
 
-> **Benchmark-platform note (planned, not shipped):** the notice below covers the verifier-era dashboard. The planned benchmark harness will run third-party agents in an isolated sandbox and capture their produced repositories. That introduces new privacy and security decisions — artifact retention, sandbox network policy, and leaderboard publication. They are not implemented and must be documented before the harness runs any user-submitted agent. See `docs/ARCHITECTURE.md`.
+**Updated:** 15 November 2026
 
-Orivoxx analyzes source code only after a user starts an analysis and acknowledges the disclosure. Selecting a ZIP file alone does not transmit its contents to the AI provider.
+Orivoxx is a public benchmark for AI software-engineering agents. The benchmark tasks are synthetic and are published in the repository. The platform does not require an account.
 
-For semantic verification and explanations, Orivoxx sends a bounded subset of eligible source context and relevant project-specification text to Nebius Token Factory. The application does not intentionally save uploaded archives or source code to persistent server storage, and request bodies/prompts must not be logged. The current report is held in browser memory and may be lost on refresh.
+## What is stored
 
-Nebius Token Factory processes requests under the terms applicable to your account and service configuration. Orivoxx does not claim that the provider retains no data unless that is separately verified. Users should not upload passwords, API keys, private keys, `.env` files, customer data, regulated data, or code they are not authorized to disclose.
+- **Benchmark scorecards:** task/ruleset/adapter/scoring versions, model identity, timestamps, the numeric score, per-rule outcomes, findings, evidence references, structural metrics, and a bounded produced-code diff as text.
+- **Repository fingerprint:** a SHA-256 fingerprint of the captured repository, used to tie a score to an artifact.
+- **No full artifacts:** Orivoxx does not store the full produced repository, ZIP bytes, raw agent stdout/stderr, raw prompts, or raw model responses.
+- **No user uploads in the scoring engine:** the public fake-adapter path scores a bundled synthetic task. Real adapters are organizer-executed on a local build machine; their scorecards are published to the shared leaderboard store.
 
-Orivoxx excludes common secret files, dependency folders, build output, binary files, and generated files. These filters reduce risk but cannot guarantee detection of every secret. Users remain responsible for reviewing their archive before upload.
+The public leaderboard store is Upstash Redis. A checked-in seed file keeps the leaderboard readable if Redis is cold or unavailable.
 
-Orivoxx never executes uploaded code, tests, builds, package installation, shell commands, or arbitrary scripts. Findings are assistance, not a guarantee of correctness or security. AI explanations are educational and never override the deterministic scoring rules.
+## Retention
+
+- Scorecard artifacts are retained for **90 days**.
+- Aggregate score, version fields, findings, and the repository fingerprint may be retained longer so historical leaderboard rows remain reproducible.
+- Removal requests can be made to the repository maintainers; a removed row is replaced with a tombstone that preserves the score and version fields but removes the diff.
+- No full source, archive bytes, secrets, or raw provider responses are retained.
+
+## Model provider
+
+Optional explanations send a bounded, consented excerpt of the task spec, finding, and validated source references to the configured model provider. The featured configuration is **OpenRouter** through its OpenAI-compatible API. The provider processes requests under its applicable terms and the terms of the underlying model provider. Orivoxx does not claim provider-side zero retention unless that is separately verified.
+
+The score path makes **no model calls**. A provider outage cannot change a score, finding, verdict, or gate. Explanation output never modifies benchmark data.
+
+## Sandbox
+
+Real agents execute inside a disposable Docker sandbox with:
+
+- no platform API keys or leaderboard credentials;
+- a non-root user, read-only root filesystem, and a bounded tmpfs workspace;
+- CPU, memory, PID, and wall-clock limits;
+- no Docker socket and no host filesystem beyond the run workspace;
+- model access only through an allowlisted proxy.
+
+The scoring engine analyzes the captured repository statically. It never executes produced code, tests, builds, package installs, or shell commands.
+
+## What not to submit
+
+Do not submit passwords, API keys, private keys, `.env` files, customer data, regulated data, or code you are not authorized to disclose. The benchmark tasks are synthetic; do not paste confidential source into an explanation request.
+
+## Contact
+
+Open an issue in the public repository for privacy or removal requests.

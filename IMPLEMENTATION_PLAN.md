@@ -1,6 +1,289 @@
+# ORIVOXX — IMPLEMENTATION PLAN
+
+- **Version:** Benchmark Platform v1.0
+- **Positioning:** benchmark AI software-engineering agents, not just models.
+- **Operating rule:** autonomous build P0–P11. Each phase ends with tests, an inspected diff, a local commit, and a `BUILD_LOG.md` entry. Phase 0 pre-flight was the only human approval gate.
+- **Historical plan:** the verifier-era phases are preserved at the bottom under `## Historical (verifier era, superseded)`.
+
+## Source of truth
+
+1. `docs/VISION.md` — problem, positioning, exclusions.
+2. `docs/ARCHITECTURE.md` — target architecture and shipped/planned boundaries.
+3. `docs/BENCHMARKS.md` — four benches, scoring model, reproducibility.
+4. `docs/FRONTEND_BENCHMARK_SPEC.md` — benchmark UI contract.
+5. `AI_HANDOFF.md` — current state and next task.
+6. `AGENTS.md` — implementation, security, and testing rules.
+
+`PROJECT_SPEC.md`, root `ARCHITECTURE.md`, `FRONTEND_DESIGN_SPEC.md`, and `ORIVOXX_COMPLETE_BLUEPRINT.md` are historical verifier-era references. They are retained, not deleted.
+
+## Decisions carried into the build
+
+| Decision | Value |
+|---|---|
+| Model provider | OpenRouter through an OpenAI-compatible API. `MODEL_PROVIDER`, `MODEL_BASE_URL`, `MODEL_API_KEY` (or `OPENROUTER_API_KEY`), `MODEL_NAME`, `FALLBACK_MODEL_NAME`, `DEMO_SECOND_MODEL`. The old Nebius adapter is optional and demoted behind the same interface. |
+| Scoring weights | Spec conformance 60%, security patterns 25%, structural maintainability 15%. |
+| Severity weights | critical 8, high 4, medium 2, low 1. |
+| Normalization | absolute 0–100, one decimal. No percentile or rank normalization. |
+| Caps | critical spec failure caps overall at 59.9; critical security failure caps at 49.9. Caps appear in the breakdown. |
+| `UNVERIFIED` | earns 0, reported separately; never treated as a pass. |
+| Storage | append-only local JSON result store behind a `ResultStore` interface; Upstash Redis for deployed reads/writes; checked-in seed results for cold/absent Redis. |
+| Retention | 90 days for result artifacts; score/findings metadata retained. No full source or ZIP in storage. |
+| Sandbox | Docker: non-root, read-only rootfs, tmpfs workspace, `--network` restricted to an internal network with a host-side allowlisted model proxy, CPU/memory/PID/time quotas, no platform secrets. |
+| Task policy | root `PROJECT_SPEC.md` stays historical; tasks carry their own versioned `PROJECT_SPEC.md`; `docs/BENCHMARK_TASK_TEMPLATE.md` is the authoring template. |
+| Submission policy | fake adapter is public/self-serve; real adapters are organizer-executed and labeled. |
+| Deployment | Next.js on Vercel for UI/APIs; real agent runs execute locally in Docker and write scorecards to Upstash. No separate runner service. |
+| License | MIT, “Orivoxx Contributors”, 2026. |
+
+---
+
+## P0 — Pre-flight decisions resolved
+
+**Objective:** Lock the decisions and boundaries before code.
+
+**Inputs:** approved Phase 0 reply; current documentation pass.
+
+**Deliverables:** `LICENSE`; amended `AGENTS.md`; this plan; updated `AI_HANDOFF.md`; `BUILD_LOG.md`; `docs/BENCHMARKS.md` scoring section; `PRIVACY_NOTICE.md` retention section; `.env.example` for the provider interface.
+
+**Acceptance:** license exists; rule 3 explicitly permits sandboxed execution while forbidding execution outside the sandbox; scoring weights, storage, sandbox, and task policy are recorded; the historical verifier plan is preserved.
+
+**Tests:** documentation consistency check; no secret in the diff.
+
+**Commit:** `chore: resolve benchmark pre-flight decisions`.
+
+**Decisions recorded:** provider, weights, storage, sandbox, task policy, license holder, deployment.
+
+---
+
+## P1 — `packages/benchmarks`
+
+**Objective:** Make benchmark tasks and their versions first-class data.
+
+**Inputs:** TaskBoard fixtures; the benchmark suite definitions.
+
+**Deliverables:**
+
+- `TaskManifestSchema` (Zod): id, version, title, summary, difficulty, bench tags, spec path, starting files, ruleset version, scoring-config version, limits, expected artifact contract.
+- `RulesetSchema` and ruleset versioning.
+- `ScoringConfigSchema` and scoring-config versioning.
+- Task registry: `listTasks()`, `getTask(id, version?)`, deterministic ordering.
+- First task: `taskboard@1.0.0`, derived from `packages/core/src/fixtures/taskboard-*/PROJECT_SPEC.md`.
+- Second task: `linkstash@1.0.0`, a small bookmark API with spec-conformance and security requirements.
+- `docs/BENCHMARK_TASK_TEMPLATE.md`.
+- Tests: schema validation, duplicate IDs, unknown versions, spec parseability, manifest/spec agreement.
+
+**Acceptance:** every task has explicit task/ruleset/scoring versions; TaskBoard spec matches the fixture contract; the registry is deterministic and importable by the web app and CLI.
+
+**Commit:** `feat: add versioned benchmark task registry`.
+
+---
+
+## P2 — `packages/harness`
+
+**Objective:** Define a model-agnostic adapter and artifact contract before running a real agent.
+
+**Inputs:** task manifest and starting repository; sandbox decisions.
+
+**Deliverables:**
+
+- `AgentAdapter` interface: id, version, label, model identity, command construction, run metadata.
+- `AdapterRunInput` / `AdapterRunOutput` Zod contracts.
+- Bounded artifact capture: path validation, denylist, symlink rejection, per-file/aggregate limits, secret redaction, repository fingerprint.
+- A fake/no-op adapter that writes the TaskBoard compliant fixture; tests only.
+- Run metadata: started/completed times, exit status, bounded stdout/stderr summaries, warnings.
+- Tests: adapter contract, artifact denial, oversized output, timeout, no shell interpolation.
+
+**Acceptance:** the fake adapter produces a valid captured repository without any real provider; no produced file is executed.
+
+**Commit:** `feat: add agent harness and bounded artifact capture`.
+
+---
+
+## P3 — Pure deterministic score function
+
+**Objective:** Turn rule outcomes into a reproducible 0–100 benchmark score.
+
+**Inputs:** parsed requirements, deterministic check outcomes, verdict output, evidence registry, structural metrics, scoring configuration.
+
+**Deliverables:**
+
+- Pure `scoreRun()` over requirement statuses and structural metrics.
+- Bench mapping (spec/security/maintainability) and severity-weighted normalization.
+- Caps for critical failures and a `capsApplied` record.
+- Structural metrics: module count, import edges, cycles, max fan-out, orphan ratio, with published thresholds.
+- Result record with `taskVersion`, `rulesetVersion`, `adapterVersion`, `scoringConfigVersion`, `repositoryFingerprint`.
+- Tests: determinism, ordering, `UNVERIFIED` behavior, caps, weight changes, version-field enforcement, and an import-graph test proving no provider/adapter import.
+- `docs/BENCHMARKS.md` scoring section updated with the shipped formula and a worked example.
+
+**Acceptance:** the same `(taskVersion, rulesetVersion, scoringConfigVersion, repositoryFingerprint)` produces byte-identical score output; no model call exists in the score path.
+
+**Commit:** `feat: add deterministic benchmark scoring`.
+
+---
+
+## P4 — Sandbox runner
+
+**Objective:** Execute adapters safely and capture their workspace.
+
+**Inputs:** P2 artifact capture; Docker decision.
+
+**Deliverables:**
+
+- Short design note: `docs/SANDBOX.md`.
+- `SandboxRunner` interface plus Docker implementation: non-root, read-only rootfs, tmpfs workspace, CPU/memory/PID/time limits, no Docker socket, no platform secrets, internal network.
+- Allowlisted model proxy: injects the provider key, forwards only the configured provider base URL, caps request/response sizes, no body logging.
+- Artifact capture after the container exits; workspace cleanup.
+- Fake adapter run end-to-end inside the sandbox, with a recorded result.
+- Tests: quota enforcement, timeout kill, path escape, proxy allowlist, secret non-exposure, cleanup.
+
+**Acceptance:** the fake adapter runs in Docker and produces a scoreable repository; the container has no host secret and no unrestricted egress; the scoring engine still receives only normalized files.
+
+**Commit:** `feat: add isolated sandbox runner`.
+
+---
+
+## P5 — Leaderboard store
+
+**Objective:** Make results append-only, queryable, and reproducible.
+
+**Inputs:** result record; Upstash credentials; Vercel constraints.
+
+**Deliverables:**
+
+- `ResultStore` interface with `append`, `get`, `list`, `listByTask`.
+- Local append-only JSON store (`.data/results`, gitignored).
+- Upstash Redis implementation (sorted index + bounded scorecard JSON).
+- Read API: `GET /api/v1/leaderboard`, `GET /api/v1/results/:id`.
+- Checked-in `data/seed-results.json` for a cold/absent Redis.
+- Retention and privacy documentation.
+- Tests: append-only semantics, sorting/ties, schema validation, missing version fields rejected, seed fallback.
+
+**Acceptance:** the leaderboard renders at least two real rows; a result can be fetched by ID; the deployed app works read-only from seed data when Redis is unavailable.
+
+**Commit:** `feat: add append-only leaderboard store`.
+
+---
+
+## P6 — Real adapters
+
+**Objective:** Compare real harnesses on the same task and model.
+
+**Inputs:** OpenRouter key; Docker image; task registry.
+
+**Deliverables, in order:**
+
+1. `fake` adapter (already shipped in P2) as the CI baseline.
+2. `python-openrouter`: a custom Python agent loop using the OpenAI-compatible proxy.
+3. `aider-openrouter`: Aider as a second harness, same model and task.
+4. Optional `claude-code` / `codex-cli` adapters if keys are provided; not required.
+
+Each adapter has a smoke test, a recorded sample run, and an entry in `docs/ADAPTERS.md`. Head-to-head runs use the same model slug so only the harness varies. A second python run uses `DEMO_SECOND_MODEL` for same-harness/different-model.
+
+**Acceptance:** at least two adapters are runnable; the head-to-head pair uses one model; results record adapter version and model identity; the comparison view has data.
+
+**Commit:** `feat: add real OpenRouter agent adapters`.
+
+---
+
+## P7 — Web surfaces
+
+**Objective:** Ship the public benchmark product.
+
+**Inputs:** task registry, result store, UI spec.
+
+**Deliverables:**
+
+- `docs/FRONTEND_BENCHMARK_SPEC.md` written first: task catalogue, submit flow, scorecard, result explorer, leaderboard, comparison, states, accessibility, component inventory.
+- Dark-only app shell and shared components.
+- `/` landing, `/benchmarks`, `/benchmarks/[taskId]`, `/submit`, `/results/[resultId]`, `/leaderboard`, `/compare`, `/privacy`.
+- API routes for tasks, runs, results, leaderboard, and optional explanations.
+- Replace the old landing copy and `layout.tsx` metadata.
+- Tests: component tests for score breakdown, empty/error states, keyboard navigation, responsive layout.
+
+**Acceptance:** the catalogue shows task/ruleset versions; a fake run produces a scorecard with per-rule evidence; the leaderboard sorts correctly; comparison shows two adapters on one task.
+
+**Commit:** `feat: build benchmark web surfaces`.
+
+---
+
+## P8 — Hardening
+
+**Objective:** Make the public endpoints safe enough for judging.
+
+**Inputs:** P7 routes.
+
+**Deliverables:** Upstash rate limiting with fail-closed production behavior; same-origin/Host checks on mutating routes; body-size and concurrency limits; safe error envelopes; request IDs; CSP and security headers; consent gate for explanations; no source logging; abuse tests.
+
+**Acceptance:** rate limits block repeat submissions; cross-origin POSTs are rejected; errors do not leak stack traces or provider details; the app remains usable when the provider is down.
+
+**Commit:** `security: harden benchmark APIs`.
+
+---
+
+## P9 — README and in-app docs
+
+**Objective:** Make the project legible to judges and new contributors.
+
+**Inputs:** working app; screenshots.
+
+**Deliverables:**
+
+- Comprehensive root `README.md`: TOC, true badges, hero screenshot, problem, flow diagram, differentiators, four benches, quickstart, adding a task, adding an adapter, architecture, docs link, hackathon note, license, acknowledgements.
+- At least six Playwright-captured screenshots under `docs/assets/`: leaderboard, catalogue, submit, scorecard, result explorer, comparison.
+- `/docs` and `/docs/[...slug]` with sidebar, breadcrumb, search, and the required sections.
+- Fresh-clone quickstart verification in a temp directory.
+- Updated `docs/ARCHITECTURE.md`, `docs/BENCHMARKS.md`, `docs/HACKATHON.md`, `PRIVACY_NOTICE.md`, `AI_HANDOFF.md`.
+
+**Acceptance:** README claims are verifiable; screenshots are real; `/docs` covers Overview through Hackathon; quickstart works from a clean clone.
+
+**Commit:** `docs: add benchmark README and in-app documentation`.
+
+---
+
+## P10 — Demo video
+
+**Objective:** Produce a narrated ~2:45 demo.
+
+**Inputs:** reference video; ElevenLabs key/voice; running app; real results.
+
+**Deliverables:** `demo/REFERENCE_NOTES.md`; `demo/SCRIPT.md`; per-scene audio; Playwright capture scripts; ffmpeg assembly; `demo/orivoxx-demo.mp4` (H.264/AAC, 1920×1080, ≤3:00); thumbnail; `demo/README.md`.
+
+**Acceptance:** narration fits each scene; no gap over 600ms except deliberate beats; sync within 150ms; no spinners or half-rendered frames; audio normalized to −16 LUFS; every visual is a real screen recording.
+
+**Commit:** `docs: add narrated Orivoxx demo`.
+
+---
+
+## P11 — Final audit and submission pack
+
+**Objective:** Prove the build and prepare submission.
+
+**Inputs:** all phases.
+
+**Deliverables:** Playwright E2E for submit → run → score → leaderboard; deterministic-scoring proof; sandbox proof; final test run; deployed URL smoke test; Devpost field draft; final report; updated `BUILD_LOG.md` and `AI_HANDOFF.md`.
+
+**Acceptance:** all tests green; E2E green; no secrets in the diff; repository pushed if authorized; Vercel deployment live; video within limits; final report covers every required section.
+
+**Commit:** `chore: finalize benchmark submission pack`.
+
+---
+
+## Phase boundaries
+
+- The autonomous build runs P0–P11 continuously. Do not stop for confirmation except for a true blocker.
+- Each phase must conclude with actual commands/results, an inspected diff, and a local commit.
+- If a requirement cannot be met, record the evidence and the smallest safe fallback in `BUILD_LOG.md`; do not invent a provider or silently drop a security invariant.
+- Never execute produced code outside the harness sandbox. Never put an LLM in the score path.
+
+---
+
+## Historical (verifier era, superseded)
+
+The plan below described the earlier deterministic-verifier product and the Nebius × NVIDIA hackathon. It is retained for contract history. It is not the current build plan.
+
+
 > **Positioning update (15 November 2026):** This plan covers the verifier-era build and the earlier Nebius x NVIDIA hackathon. The current product is a benchmarking platform for AI software-engineering agents. Do not start benchmark-layer code from this plan; see `docs/ARCHITECTURE.md` and `docs/HACKATHON.md` for the target scope.
 
-# ORIVOXX — IMPLEMENTATION PLAN
+#### ORIVOXX — IMPLEMENTATION PLAN
 
 - **Version:** Hackathon MVP v2.1
 - **Submission deadline:** Friday, 30 October 2026, 6:00 p.m. WAT — historical
@@ -8,7 +291,7 @@
 
 This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architecture before code, small independently testable phases, evidence-based verification, small Git checkpoints, and no automatic progression to the next phase.
 
-## Phase 0 — Bootstrap and Token Factory smoke test
+##### Phase 0 — Bootstrap and Token Factory smoke test
 
 **Objective:** Prove the chosen stack/model/provider before creating product logic.
 
@@ -26,7 +309,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `chore: bootstrap orivoxx hackathon app`.
 
-## Phase 1 — Domain contracts and bundled TaskBoard fixtures
+##### Phase 1 — Domain contracts and bundled TaskBoard fixtures
 
 **Objective:** Create the canonical schemas, realistic sample project, and expected results.
 
@@ -40,7 +323,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `feat: define verification contracts and demo fixtures`.
 
-## Phase 2 — Secure ZIP intake and specification parser
+##### Phase 2 — Secure ZIP intake and specification parser
 
 **Objective:** Accept bounded project ZIPs safely, without executing code or storing files.
 
@@ -56,7 +339,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `feat: safely ingest project archives`.
 
-## Phase 3 — Deterministic verifier and evidence registry
+##### Phase 3 — Deterministic verifier and evidence registry
 
 **Objective:** Make repeatable non-AI checks useful before model reasoning.
 
@@ -70,7 +353,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `feat: add deterministic specification checks`.
 
-## Phase 4 — Nebius Token Factory integration and semantic verification
+##### Phase 4 — Nebius Token Factory integration and semantic verification
 
 **Objective:** Add a real runtime Nemotron call for semantic requirements.
 
@@ -84,7 +367,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `feat: verify semantic requirements with Nemotron on Nebius`.
 
-## Phase 5 — Dark map-first verification workspace
+##### Phase 5 — Dark map-first verification workspace
 
 **Objective:** Implement the visual identity and the main differentiated view: a dependency graph that gives users a quick visual scan of where verified deviations occur.
 
@@ -100,7 +383,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `feat: build dark map-first verification workspace`.
 
-## Phase 6 — Contextual teaching
+##### Phase 6 — Contextual teaching
 
 **Objective:** Deliver explain-code and explain-finding using the same live Nemotron provider while keeping education separate from verification.
 
@@ -114,7 +397,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `feat: teach code and verification findings`.
 
-## Phase 7 — Abuse protection, privacy and accessibility hardening
+##### Phase 7 — Abuse protection, privacy and accessibility hardening
 
 **Objective:** Make public API safe enough for hackathon judging.
 
@@ -126,7 +409,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `security: harden public Orivoxx demo`.
 
-## Phase 8 — End-to-end release verification and deployment
+##### Phase 8 — End-to-end release verification and deployment
 
 **Objective:** Deploy the complete working app and prove the hackathon-required runtime path.
 
@@ -138,7 +421,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `release: deploy Orivoxx hackathon MVP`.
 
-## Phase 9 — Submission pack and final audit
+##### Phase 9 — Submission pack and final audit
 
 **Objective:** Submit before the deadline with all evidence complete.
 
@@ -150,7 +433,7 @@ This plan follows `PROPER_VIBE_CODING_WORKFLOW.md`: specification and architectu
 
 **Git checkpoint:** `docs: finalize Nebius hackathon submission package`.
 
-## Phase boundaries
+##### Phase boundaries
 
 - Do not begin the next phase automatically.
 - Each phase must conclude with actual commands/results, inspected diff, known limitations, and a commit only if its acceptance criteria pass.

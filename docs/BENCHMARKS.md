@@ -1,6 +1,6 @@
 # Orivoxx — Benchmark Suite
 
-**Status:** design specification. None of the benches below are implemented as benchmark tasks yet. The deterministic rule engine they depend on exists in `packages/core`; the task registry, scoring configuration, harness, and leaderboard do not.
+**Status:** shipped benchmark contract. `packages/benchmarks` implements the task registry, rulesets, scoring configuration, and pure score function; `packages/harness` implements the adapters and Docker sandbox. The scorecard and leaderboard are live in `apps/web`. The exact model/provider is configuration, not a benchmark invariant.
 
 This document defines what each bench measures, how it is scored, and what it deliberately does **not** measure. The last part is as important as the first: a deterministic benchmark is only honest if its boundaries are explicit.
 
@@ -137,19 +137,37 @@ A result missing any of the first five fields is not a valid leaderboard entry.
 - Time, randomness, and model output must not influence the score.
 - If a rule cannot be evaluated because evidence is missing, the requirement is `UNVERIFIED`, never `PASS`.
 
-## Score aggregation (proposed)
+## Score aggregation (shipped)
 
-A single overall score can be a weighted combination of the benches:
+The score is a pure function of declared rule outcomes, structural metrics, and a versioned scoring configuration. It makes no model calls.
 
 ```text
-overall = w_spec * specScore
-        + w_security * securityScore
-        + w_maintainability * maintainabilityScore
+benchScore   = 100 * sum(severityWeight[req] * pass[req]) / sum(severityWeight[req])
+overall      = 0.60 * specScore + 0.25 * securityScore + 0.15 * maintainabilityScore
 ```
 
-Weights live in the task's `scoringConfigVersion`, not in code. The UI must show the per-bench breakdown and the rule-level deductions. A single number without the breakdown is not sufficient evidence.
+- **Severity weights:** critical 8, high 4, medium 2, low 1.
+- **`pass[req]`:** `1` for `PASS`, `0` for `FAIL` and `UNVERIFIED`. `UNVERIFIED` is reported separately and never counted as a pass.
+- **Normalization:** absolute 0–100, rounded to one decimal. No percentile, rank, or cohort normalization.
+- **Caps:** a critical spec failure caps `overall` at 59.9; a critical security failure caps it at 49.9. The cap is applied after the weighted sum and recorded in `capsApplied`.
+- **Maintainability:** computed from the static import graph. Metrics: dependency cycles, maximum fan-out, orphan-module ratio, and module count. Each metric uses published thresholds in the task's `scoringConfigVersion`.
+- **Versions:** `taskVersion`, `rulesetVersion`, `adapterVersion`, `scoringConfigVersion`, and `repositoryFingerprint` are mandatory on every result.
 
-> `TODO(verify)`: the numeric aggregation, weights, caps, and leaderboard persistence are design proposals. The shipped engine emits statuses, findings, evidence, and a gate — not a numeric score.
+### Worked example
+
+Suppose a task has 10 requirements:
+
+| Bench | Requirements | Earned weight | Total weight | Bench score |
+|---|---|---:|---:|---:|
+| Spec | 6 | 26 | 32 | 81.3 |
+| Security | 3 | 12 | 16 | 75.0 |
+| Maintainability | metrics | — | — | 90.0 |
+
+`overall = 0.60 * 81.3 + 0.25 * 75.0 + 0.15 * 90.0 = 48.78 + 18.75 + 13.50 = 81.0`
+
+If the failed requirement is a critical spec failure, the 59.9 cap applies and the result records `capsApplied: ["critical-spec-fail"]`.
+
+Weights live in the task's scoring configuration, not in code. The UI must show the per-bench breakdown and the rule-level deductions. A single number without the breakdown is not sufficient evidence.
 
 ## Known limitations
 
