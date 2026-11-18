@@ -27,6 +27,8 @@ packages/harness                 the only component that executes an agent
   ├── benchmark                  run → capture → score → immutable result
   └── run                        run lifecycle, command/env validation, summaries
 
+packages/attribution             deterministic failure attribution rules
+packages/replay                  counterfactual replay + proof
 packages/results                 append-only result storage
   ├── contracts                  BenchmarkResult/LeaderboardEntry, consistency invariants
   ├── local                      one immutable JSON file per result
@@ -103,7 +105,9 @@ What this means in practice:
 |---|---|---|
 | `packages/benchmarks` | Versioned task registry, ruleset manifests, scoring configuration. | `[SHIPPED]` |
 | `packages/harness` | Agent adapter interface, run lifecycle, Docker sandbox, allowlisted model proxy, artifact capture, adapter versioning. | `[SHIPPED]` |
-| `packages/results` | Append-only result storage, leaderboard ordering, Upstash and local stores, seed fallback. | `[SHIPPED]` |
+| `packages/attribution` | 12 deterministic layer × mode rules over trace + scorecard; evidence required. | `[SHIPPED]` |
+| `packages/replay` | Memoized counterfactual replay over recorded actions; deterministic proof. | `[SHIPPED]` |
+| `packages/results` | Append-only result storage, reliability aggregation, leaderboard ordering, Upstash/local stores, seed fallback. | `[SHIPPED]` |
 | `apps/runner` | Optional isolated execution service. | `[SUPERSEDED]` — real runs execute through `packages/harness` on the organizer machine |
 | `apps/web` | Public benchmark UI, task catalogue, fake run submission, result explorer, leaderboard, comparison, in-app docs. | `[SHIPPED]` — optional explanations are not shipped |
 | `packages/core` | Deterministic scoring rubric over the captured repository. | `[SHIPPED]` — engine only |
@@ -118,7 +122,8 @@ Flow for one organizer-run benchmark run:
 4. **Capture the produced repository.** After the container exits, the workspace is normalized (path validation, denylist filtering, secret redaction, size ceilings) and fingerprinted.
 5. **Score.** `packages/benchmarks` runs the deterministic ruleset and the static import graph over the captured text. No produced code is executed.
 6. **Aggregate.** `scoreRun()` maps rule outcomes to the task score. The result records task/ruleset/adapter/scoring-config versions and the repository fingerprint.
-7. **Publish.** The result is appended to the result store (Upstash in deployment, local otherwise) and exposed by the read APIs with per-rule evidence. The store is append-only: a re-run produces a new row.
+7. **Attribute.** Deterministic rules map the trace and scorecard to a layer × mode cell with evidence. A counterfactual replay applies one intervention and rescores the recorded actions.
+8. **Publish.** The result, trace summaries, metrics, attribution, and proof are appended to the store (Upstash in deployment, local otherwise) and exposed by the read APIs. The store is append-only: a re-run produces a new row.
 
 ### What is deliberately synchronous vs. queued
 

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { groupReliability } from "@orivoxx/results";
+
 import { webLeaderboard } from "@/server/results";
 
 export const dynamic = "force-dynamic";
@@ -42,10 +44,16 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const leaderboard = await webLeaderboard(parsed.data);
+  const reliability = groupReliability(leaderboard.entries).map((group) => ({
+    adapterId: group.adapterId,
+    taskId: group.taskId,
+    profile: group.profile,
+  }));
 
   return NextResponse.json(
     {
       entries: leaderboard.entries,
+      reliability,
       store: leaderboard.store,
       degraded: leaderboard.degraded,
       readOnly: leaderboard.readOnly,

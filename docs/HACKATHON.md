@@ -41,13 +41,15 @@ Close on the leaderboard with the version fields visible.
 
 ## Shipped in this build
 
-- `packages/core`: spec parser, seven deterministic check types, evidence registry, verdict precedence, report contract, bounded archive intake.
-- `packages/benchmarks`: versioned task registry (TaskBoard, Linkstash), rulesets, scoring configuration, deterministic score, static import graph and structural metrics.
-- `packages/harness`: adapter contract, `fake` / `python-openrouter` / `aider-openrouter`, Docker sandbox, allowlisted model proxy, bounded capture, produced-code diff, organizer CLI.
-- `packages/results`: append-only result contracts, local and Upstash stores, seed fallback, leaderboard ordering.
-- `apps/web`: landing, task catalogue, task detail, submit, result explorer, leaderboard, compare, privacy, `/docs`, read APIs, fake run endpoint, rate limiting and origin checks.
-- `data/seed-results.json`: four recorded fake-baseline rows.
-- Real recorded runs: python and Aider on `openai/gpt-4o-mini`, python on `deepseek/deepseek-chat-v3-0324`.
+- `packages/core`: spec parser, deterministic checks, evidence registry, verdict precedence, report contract, bounded archive intake, trace/attribution contracts.
+- `packages/benchmarks`: versioned task registry, rulesets, scoring, static import graph.
+- `packages/harness`: fake / python-openrouter / aider-openrouter, Docker sandbox, allowlisted proxy, trace capture, capture, diff, organizer CLI with chaos.
+- `packages/attribution`: 12 deterministic layer × mode rules with evidence.
+- `packages/replay`: memoized counterfactual replay and proof.
+- `packages/results`: append-only stores, reliability aggregation, seed fallback.
+- `apps/web`: marketing landing at `/`, app home at `/app`, catalogue, submit, result, trace, replay, leaderboard, compare, privacy, `/docs`.
+- Real recorded runs: 96.4 baseline; 49.7 tool_error attributed to harness × recovery with a 98.3 PASS replay; 98.1/97.3 harness comparison.
+- Demo: `demo/orivoxx-demo.mp4` with ElevenLabs narration and word-synced captions.
 
 ## Demo-only or roadmap
 

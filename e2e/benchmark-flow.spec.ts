@@ -65,7 +65,7 @@ test("unknown result is a 404 with a way back", async ({ page }) => {
 });
 
 test("every screen is dark and stays inside the viewport", async ({ page }) => {
-  for (const path of ["/", "/benchmarks", "/leaderboard", "/compare", "/submit", "/docs"]) {
+  for (const path of ["/", "/app", "/benchmarks", "/leaderboard", "/compare", "/submit", "/docs"]) {
     await page.goto(path);
 
     const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
@@ -73,7 +73,7 @@ test("every screen is dark and stays inside the viewport", async ({ page }) => {
       () => document.documentElement.scrollWidth - window.innerWidth,
     );
 
-    expect(background, path).toBe("rgb(11, 13, 16)");
+    expect(background, path).toBe("rgb(11, 11, 9)");
     expect(overflow, path).toBeLessThanOrEqual(1);
   }
 

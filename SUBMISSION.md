@@ -10,86 +10,100 @@ Working copy for the Devpost form. Facts below are verifiable in the repository 
 | Tagline | **Benchmark the agent, not just the model.** |
 | Track | Build a Benchmarking Platform for AI Agents, Not Just Models |
 | Live app | <https://orivoxx.vercel.app> |
+| App home | <https://orivoxx.vercel.app/app> |
 | Repository | <https://github.com/productivityapplications/Orivoxx> |
-| Demo video | `demo/orivoxx-demo.mp4` (2:38) — upload to the submission host |
+| Demo video | `demo/orivoxx-demo.mp4` (2:21) — upload to the submission host |
 | License | MIT |
 
 ## Short description
 
-Orivoxx is a benchmarking platform for AI software-engineering agents. It runs an agent configuration against a versioned `PROJECT_SPEC.md` inside a hardened Docker sandbox, captures the produced repository, and scores it deterministically on spec conformance, security patterns, and structural maintainability. Every point traces to a named rule and evidence, and no model is in the score path.
+Orivoxx is a framework-independent benchmark for AI software-engineering agents with **six metrics, three resilience modes, and deterministic counterfactual failure attribution**. It scores the produced repository statically, then names every failure by layer × mode and proves the attribution with a replay that crosses the pass threshold. No model is in the score path or the attribution path.
 
-## Inspiration
+## The headline
 
-Agent leaderboards usually compare foundation models with one fixed harness. That hides the variable practitioners actually choose: the agent configuration. A different tool loop, edit format, or stopping condition changes the produced repository even with the same model. We wanted a benchmark where the harness is a first-class variable and the score is reproducible.
+A trace shows what happened, not why. Orivoxx attributes a failure to one of 20 cells — five layers (spec, model, harness, tool, environment) × four modes (decision, execution, recovery, detection) — and stores a counterfactual proof: baseline 49.7 → retry at step 2 → 98.3 PASS.
 
 ## What it does
 
-1. **Versioned tasks.** TaskBoard and Linkstash each pin a spec, starting repository, ruleset, scoring configuration, and time limit.
-2. **Sandboxed runs.** A model-agnostic harness runs the agent in Docker: non-root, read-only root filesystem, quotas, no platform secrets, and an allowlisted model proxy as the only egress.
-3. **Static deterministic scoring.** Spec conformance (60%), security patterns (25%), and structural maintainability (15%). Severity weights, published caps (59.9 / 49.9), and `UNVERIFIED` semantics. No produced code is executed.
-4. **Immutable records.** Task, ruleset, scoring-config, adapter, and repository fingerprint are recorded on every row. The store is append-only.
-5. **Result explorer and leaderboard.** Requirement rows with declared rule and outcome, bounded diff text, caps, versions, and a head-to-head comparison.
-6. **Self-serve baseline.** Anyone can run the fake baseline without a model call and get a real result.
+1. **Versioned tasks.** TaskBoard and Linkstash pin a spec, starting repository, ruleset, scoring configuration, and pass threshold.
+2. **Sandboxed runs.** A model-agnostic adapter runs in Docker: non-root, read-only rootfs, quotas, no platform secrets, one allowlisted model proxy.
+3. **Six metrics.** Artifact score, steps, tool calls, tokens, cost, duration.
+4. **Three chaos modes.** Injected tool error, latency, context pressure.
+5. **Deterministic scoring.** Spec 60% / security 25% / maintainability 15%; caps at 59.9 / 49.9; no model in the loop.
+6. **Attribution.** Twelve deterministic rules over the trace; each cell has step-level evidence.
+7. **Replay proof.** Memoized counterfactual: byte-identical prefix, one intervention, static rescore.
+8. **Reliability profile.** Mean ± std, pass@k, layer distribution, chaos sensitivity, trend.
+9. **Public product.** Landing, app home, catalogue, result, trace, replay, leaderboard, compare, docs.
+10. **Self-serve baseline.** Anyone can create a real result without a model call.
+
+## Real recorded proof
+
+```text
+Result: res_64068a9c… · deepseek/deepseek-chat-v3-0324 · tool_error
+Score: 49.7 · exit failed
+Attribution: harness × recovery
+Evidence: step 2, write_file → EACCES, no retry before exit
+Replay: intervention retry_policy at step 2, 6 replayed steps
+Counterfactual: 98.3 PASS (threshold 70)
+```
+
+The public result page and `/replay/res_64068a9c…` show this. An earlier generated project route did not satisfy the critical marker, and its retry was stored as **insufficient (59.9)** rather than presented as proof.
+
+## Attribution validation
+
+- 12 labeled synthetic fixtures cover 12 taxonomy cells.
+- Fixture precision: 12/12 attributed runs correct.
+- Fixture recall: 12/12 labeled cells named.
+- Real-model sample: 3 tool_error runs; 1 proven sufficient, 2 rule-matched but insufficient.
+- Precision and recall are reported separately. Real-world recall depends on rule coverage and is not claimed as complete.
+
+## Replay invariant
+
+A test replays a recorded TaskBoard action set with no intervention and reproduces the baseline score exactly. With a retry at the failed step, it crosses the threshold; with a stop policy and the missing action, it returns insufficient. No model call, no produced-code execution, no filesystem writes.
+
+## Reliability profile
+
+The leaderboard aggregates stored runs by adapter + task: artifact score mean ± std, pass@k (score ≥ 70 and completed), layer distribution, pass rate per chaos condition, and trend. The stacked bar is the layer distribution, not decoration.
 
 ## How we built it
 
-- **Scoring:** TypeScript, Zod, Vitest. Deterministic rule engine and a static JS/TS import graph. A test asserts the score import graph contains no provider or adapter module.
-- **Harness:** adapter contract, Docker executor, allowlisted model proxy, bounded artifact capture, secret redaction, produced-code diff.
-- **Adapters:** `fake` baseline; `python-openrouter` (standard-library Python agent loop); `aider-openrouter` (Aider 0.86.2 pinned in the image).
-- **Data:** append-only `ResultStore` with local JSON, Upstash Redis, and a bundled seed fallback.
-- **Web:** Next.js 16 App Router, React, Tailwind, dark-only list-first UI, read APIs, fake run endpoint, shared rate limiting, origin checks, CSP.
-- **Demo:** Playwright screen recordings, ffmpeg assembly, captions, loudness normalization.
-
-## Recorded results
-
-Task `taskboard 1.0.0`, same task and ruleset for all rows.
-
-| Adapter | Model | Overall | Spec / Security / Maintainability | Caps |
-|---|---|---|---|---|
-| python-openrouter | openai/gpt-4o-mini | 97.3 | 100 / 100 / 82.0 | none |
-| aider-openrouter | openai/gpt-4o-mini | 97.3 | 100 / 100 / 82.0 | none |
-| python-openrouter | deepseek/deepseek-chat-v3-0324 | 98.1 | 100 / 100 / 87.1 | none |
-
-The first two rows are the head-to-head: one model, two harnesses. Fake-baseline fixtures record 99.5 compliant and 59.9 regressed.
+- **Scoring:** TypeScript, Zod, Vitest; static import graph; import-graph boundary test.
+- **Harness:** adapter contract, Docker executor, proxy trace, bounded capture, diff.
+- **Attribution:** pure rule engine; no provider dependency; evidence required.
+- **Replay:** in-memory file map + existing deterministic engine; action log ephemeral.
+- **Data:** append-only local/Upstash store; reliability aggregation; seed fallback.
+- **Web:** Next.js 16, React, Tailwind, dark-only Coderia-derived design, Playwright E2E.
+- **Video:** ElevenLabs with word timestamps, Playwright recordings, ASS karaoke captions, ffmpeg.
 
 ## Challenges
 
-- Keeping the score path free of model influence while still offering a useful product. The answer: the model is never an input to a verdict; optional explanation is a separate surface and does not ship in this build.
-- Making a sandbox that is genuinely isolated but still usable by real agents. The proxy sidecar is the only egress; the agent joins only an internal network.
-- Reproducibility across versions. Version fields and a repository fingerprint are required, not optional metadata.
-- Time and provider quotas. The demo narration provider hit a free-tier quota; the fallback is documented in `demo/README.md`.
-
-## Accomplishments
-
-- A deterministic score with published caps and per-requirement evidence.
-- A real Docker sandbox with a tested allowlist: traversal, methods, body budgets, secret injection, no raw internet.
-- Two real harnesses compared on one model, with recorded runs.
-- An append-only store that works from Upstash, local JSON, or bundled seed data.
-- A public app with rate limiting, same-origin enforcement, CSP, and safe error envelopes.
-- 459 unit tests, 5 Playwright E2E tests, and a gated Docker integration suite.
+- Proving attribution without re-running the model: solved by recording actions and replaying only deterministic text writes.
+- Keeping full source out of storage while enabling replay: the action log is memory-only; only redacted trace summaries and the proof are persisted.
+- Balancing orientation and action in `/app`: numbered sections, real artifacts, explicit empty states.
+- Honest numbers: the insufficient proof is visible, and the demo shows it rather than hiding it.
 
 ## What we learned
 
-- Harness choice is measurable. The two harnesses produced different repositories and different maintainability despite the same score.
-- Text-marker checks are easy to game; a benchmark needs structural checks and honest limitations.
-- Deterministic scoring forces better task design: every requirement must name its evidence.
+- The harness is measurable: two harnesses on one model produced different repositories.
+- Attribution is only credible with a counterfactual; a rule name alone is a hypothesis.
+- Redaction and replay pull in opposite directions; the ephemeral action log is the workable boundary.
 
 ## What's next
 
-- A hosted run queue for public agent submissions.
-- More language parsers for the structural bench.
-- An optional, consent-gated explanation panel that never touches the score.
-- Per-task leaderboards with confidence intervals over repeated runs.
-- A scheduled retention job.
+- More rules to cover the remaining taxonomy cells.
+- A hosted organizer queue for public agent submissions.
+- More language parsers for structural analysis.
+- Scheduled 90-day retention.
+- Calibrated confidence intervals over repeated runs.
 
 ## Built with
 
-`next.js` · `react` · `typescript` · `tailwindcss` · `zod` · `vitest` · `playwright` · `docker` · `upstash-redis` · `openrouter` · `aider` · `python` · `ffmpeg` · `pnpm`
+`next.js` · `react` · `typescript` · `tailwindcss` · `zod` · `vitest` · `playwright` · `docker` · `upstash-redis` · `openrouter` · `aider` · `python` · `elevenlabs` · `ffmpeg`
 
 ## Honest limitations
 
-- Static analysis only; the scoring engine never runs produced code, tests, or builds.
+- Static analysis only; the scoring engine never runs produced code.
 - JS/TS import parsing first; other languages need new parsers.
-- A passing ruleset means the declared rules passed, not that the software is correct.
+- Attribution recall depends on rule coverage; precision and recall are reported separately.
 - Real adapter runs are organizer-executed because they require Docker and provider credentials.
-- The demo narration is a local voice fallback after the ElevenLabs free quota was exhausted; this is documented, not hidden.
+- Replay is proven for failures whose recorded actions are sufficient; some interventions remain insufficient.

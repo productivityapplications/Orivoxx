@@ -2,26 +2,27 @@
 
 **Benchmark the agent, not just the model.**
 
-Orivoxx is a benchmarking platform for AI software-engineering agents. It runs an agent configuration — model, harness, tools, orchestration, and stopping conditions — against a versioned `PROJECT_SPEC.md` inside an isolated Docker sandbox, captures the produced repository, and scores it deterministically on spec conformance, security patterns, and structural maintainability.
+Orivoxx benchmarks AI software-engineering agents and attributes their failures. It runs an agent configuration against a versioned `PROJECT_SPEC.md` inside a hardened Docker sandbox, scores the produced repository deterministically on six metrics, then names every failure by **layer × mode** and proves the attribution with a counterfactual replay.
 
-Every point traces to a named rule and evidence. **No model is in the score path.**
+**No model is in the score path. No attribution is accepted without evidence.**
 
-![Orivoxx landing page](docs/assets/screens/home.png)
-
-[![tests](https://img.shields.io/badge/unit%20tests-459%20passing-48C9A4?style=flat-square)](#testing)
-[![score](https://img.shields.io/badge/model%20in%20score%20path-none-A78BFA?style=flat-square)](#the-deterministic-guarantee)
+[![deployed](https://img.shields.io/badge/deployed-orivoxx.vercel.app-17CF97?style=flat-square)](https://orivoxx.vercel.app)
+[![tests](https://img.shields.io/badge/unit%20tests-480%20passing-17CF97?style=flat-square)](#testing)
+[![attribution](https://img.shields.io/badge/attribution-proof--backed-17CF97?style=flat-square)](#failure-attribution)
 [![sandbox](https://img.shields.io/badge/agent%20execution-Docker%20sandbox-75A7FF?style=flat-square)](#the-sandbox-guarantee)
-[![deployed](https://img.shields.io/badge/deployed-orivoxx.vercel.app-75A7FF?style=flat-square)](https://orivoxx.vercel.app)
-[![license](https://img.shields.io/badge/license-MIT-8792A2?style=flat-square)](LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-8C8C85?style=flat-square)](LICENSE)
 
 ## Table of contents
 
-- [Why this exists](#why-this-exists)
-- [What it measures](#what-it-measures)
+- [Live demo](#live-demo)
 - [Demo video](#demo-video)
+- [Why this exists](#why-this-exists)
+- [What Orivoxx measures](#what-orivoxx-measures)
+- [Failure attribution](#failure-attribution)
+- [Replay and proof](#replay-and-proof)
+- [Reliability profile](#reliability-profile)
 - [Screenshots](#screenshots)
 - [Architecture](#architecture)
-- [Live demo](#live-demo)
 - [Quickstart](#quickstart)
 - [Run a real agent](#run-a-real-agent)
 - [Adding a benchmark task](#adding-a-benchmark-task)
@@ -36,83 +37,157 @@ Every point traces to a named rule and evidence. **No model is in the score path
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
 
-## Why this exists
+## Live demo
 
-Agent benchmarks usually compare foundation models with a fixed harness. That hides the variable that matters in practice: **the agent configuration**. A different tool loop, prompt strategy, file-edit format, or stopping condition changes the result even when the model is identical.
+**<https://orivoxx.vercel.app>** · app home at **[/app](https://orivoxx.vercel.app/app)**
 
-Orivoxx holds the task and model constant where you want them constant, and measures the produced repository with a published rubric:
+The deployment is read-only for real results. The fake baseline is self-serve: `/submit` creates a real, immutable scorecard without a model call. Real adapter runs are organizer-executed in Docker and published to the shared store.
 
-- The **task** is a versioned spec plus a starting repository and a deterministic ruleset.
-- The **harness** is an adapter that runs inside a hardened Docker sandbox.
-- The **score** is computed statically from the captured text. Produced code is never executed by the scoring engine.
-- The **record** is immutable and carries every version needed to reproduce it.
-
-Two harnesses on one model can score differently. That difference is the product.
-
-## What it measures
-
-| Bench | Weight | Source | Example checks |
-|---|---|---|---|
-| **Spec conformance** | 60% | Declared deterministic checks in the task ruleset | File exists, text marker present, dependency absent |
-| **Security patterns** | 25% | Declared security requirements | No `.env`, no dynamic evaluation, no shell-execution dependency |
-| **Structural maintainability** | 15% | Static import graph | Dependency cycles, max fan-out, orphan ratio, module count |
-
-Scoring is severity-weighted: critical 8, high 4, medium 2, low 1. `PASS` earns full weight; `FAIL` and `DRIFT` earn zero; `UNVERIFIED` earns zero but is reported separately. A critical spec failure caps the overall score at **59.9**; a critical security failure caps it at **49.9**. Caps are stored and shown in the UI, never hidden.
-
-Published detail: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+![Orivoxx landing page](docs/assets/screens/landing.png)
 
 ## Demo video
 
-[`demo/orivoxx-demo.mp4`](demo/orivoxx-demo.mp4) — 2:38, 1920 × 1080, H.264/AAC, narrated and captioned. Every visual is a real screen recording of this build: landing, versioned task, leaderboard, a 97.3 result with requirement evidence, compare, and a self-serve fake run that lands on a capped 59.9 result.
+[`demo/orivoxx-demo.mp4`](demo/orivoxx-demo.mp4) — 2:21, 1920 × 1080, H.264/AAC, ElevenLabs narration, word-synced captions, −15.9 LUFS. Every visual is a real Playwright recording of this build: landing, measurement, a real run, attribution, replay proof, reliability bars, and close.
 
-Pipeline and checks: [`demo/README.md`](demo/README.md) · script: [`demo/SCRIPT.md`](demo/SCRIPT.md).
+Production notes: [`demo/README.md`](demo/README.md) · script: [`demo/SCRIPT.md`](demo/SCRIPT.md) · reference study: [`demo/REFERENCE_NOTES.md`](demo/REFERENCE_NOTES.md).
 
-> Narration provider note: ElevenLabs was attempted first; the configured library voice requires a paid plan and the remaining free character quota covered only three scenes. The shipped cut uses a local Piper voice for consistency. Recorded in `BUILD_LOG.md`.
+## Why this exists
+
+Agent leaderboards usually compare foundation models with a fixed harness. That hides the variable practitioners actually choose. Worse, when an agent fails, a trace shows **what happened** but not **why**: developers stare at 47 steps and guess whether the model, the harness, a tool, or the specification is responsible.
+
+Orivoxx makes the harness a first-class variable and turns failure analysis into a deterministic, proof-backed result:
+
+- The **task** is a versioned spec plus a starting repository and ruleset.
+- The **run** executes in a sandbox and records a bounded trace.
+- The **score** is static. Produced code is never executed by the scoring engine.
+- The **attribution** names a layer × mode cell from trace evidence.
+- The **proof** is a replay that changes one thing and crosses the pass threshold.
+
+## What Orivoxx measures
+
+| Bench | Weight | Source |
+|---|---|---|
+| **Spec conformance** | 60% | Declared deterministic checks in the ruleset |
+| **Security patterns** | 25% | Declared security requirements |
+| **Structural maintainability** | 15% | Static import graph: cycles, fan-out, orphan ratio, module count |
+
+Six per-run metrics come from the trace and the provider usage object:
+
+| Metric | Source |
+|---|---|
+| Artifact score | deterministic engine |
+| Steps | model + tool steps |
+| Tool calls + error rate | trace |
+| Prompt / completion tokens | provider usage via proxy |
+| Cost (USD) | provider usage via proxy |
+| Duration | wall clock |
+
+Three chaos modes exercise resilience: `tool_error` (a write fails with EACCES), `latency` (fixed delay per model call), and `context_pressure` (truncated context, reduced step budget).
+
+Published detail: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) and [`docs/OBSERVABILITY_SPEC.md`](docs/OBSERVABILITY_SPEC.md).
+
+## Failure attribution
+
+A failure is attributed to one of **20 cells**: five layers × four modes.
+
+| Layer | Question |
+|---|---|
+| Spec | Is the task contradictory, ambiguous, or underspecified? |
+| Model | Did the model reason incorrectly, ignore an instruction, or hallucinate? |
+| Harness | Did orchestration swallow an error, skip a retry, or stop badly? |
+| Tool | Did a tool return a wrong result or fail from its own fault? |
+| Environment | Did an external service fail (network, timeout, quota)? |
+
+| Mode | Question |
+|---|---|
+| Decision | Wrong choice among viable options |
+| Execution | Correct choice, failed to execute |
+| Recovery | Should have recovered from a fault, did not |
+| Detection | Should have noticed an inconsistency, did not |
+
+Twelve deterministic rules ship today. A rule returns a cell, a step, and evidence; it never inspects source content, and it never calls a model.
+
+**Real recorded example**
+
+```text
+Attributed: harness × recovery
+Evidence: step 2, write_file → EACCES, no retry, downstream failure
+Proof: replay with retry policy → PASS (49.7 → 98.3)
+(intervention at step 2, replay steps 2–7, deterministic scoring)
+```
+
+The proof is stored with the result. If no intervention crosses the threshold, the result says **unattributed** and names the reason. No cell is fabricated.
+
+Spec: [`docs/ATTRIBUTION_SPEC.md`](docs/ATTRIBUTION_SPEC.md).
+
+## Replay and proof
+
+Replay is memoized and deterministic:
+
+1. Materialize the task's starting files in memory.
+2. Replay recorded actions before the intervention; the prefix is byte-identical by construction.
+3. Apply one intervention at step `k` (retry policy, stop policy, or action replacement).
+4. Replay the remaining recorded actions.
+5. Score with the existing deterministic engine.
+
+No model call. No produced code execution. No filesystem writes. The no-intervention invariant is tested: replay reproduces the baseline exactly.
+
+## Reliability profile
+
+A single score is a sample. The profile aggregates stored runs for one adapter and task:
+
+- artifact score mean ± standard deviation;
+- `pass@k` (score ≥ threshold and a completed exit);
+- layer distribution behind attributed failures;
+- pass rate per chaos condition;
+- trend across the run window.
+
+The leaderboard's stacked bar is the layer distribution: spec violet, model blue, harness red, tool amber, environment neutral.
 
 ## Screenshots
 
-All screenshots are captured by Playwright from the running build against real stored results.
+All screenshots are Playwright captures of the running build against real stored results.
 
-| Leaderboard | Task catalogue |
+| Landing | App home |
 |---|---|
-| ![Leaderboard](docs/assets/screens/leaderboard.png) | ![Benchmarks](docs/assets/screens/benchmarks.png) |
+| ![Landing](docs/assets/screens/landing.png) | ![App home](docs/assets/screens/app.png) |
 
-| Task detail | Submit the fake baseline |
+| Leaderboard with reliability | Result scorecard |
 |---|---|
-| ![Task detail](docs/assets/screens/task.png) | ![Submit](docs/assets/screens/submit.png) |
+| ![Leaderboard](docs/assets/screens/leaderboard.png) | ![Result](docs/assets/screens/result-scorecard.png) |
 
-| Result scorecard | Requirement evidence |
+| Attribution card | Replay proof |
 |---|---|
-| ![Result scorecard](docs/assets/screens/result-scorecard.png) | ![Requirement explorer](docs/assets/screens/result-explorer.png) |
+| ![Attribution](docs/assets/screens/attribution.png) | ![Replay](docs/assets/screens/replay.png) |
 
-| Cap banner | Compare two harnesses |
+| Trace timeline | Compare |
 |---|---|
-| ![Capped result](docs/assets/screens/result-capped.png) | ![Compare](docs/assets/screens/compare.png) |
+| ![Trace](docs/assets/screens/trace.png) | ![Compare](docs/assets/screens/compare.png) |
+
+| Task detail | Docs: attribution |
+|---|---|
+| ![Task](docs/assets/screens/task.png) | ![Docs](docs/assets/screens/docs-attribution.png) |
 
 ## Architecture
 
 ```text
 apps/web (Next.js 16 on Vercel)
-  landing · task catalogue · submit · result explorer · leaderboard · compare · docs
-  /api/v1/tasks · /api/v1/runs · /api/v1/results · /api/v1/leaderboard
+  / marketing landing · /app orientation · catalogue · submit · result · trace · replay
+  leaderboard · compare · docs · privacy
         │
         ├── packages/benchmarks   versioned tasks · rulesets · deterministic score · static graph
-        ├── packages/harness      adapters · Docker executor · allowlisted proxy · capture · diff
-        ├── packages/results      append-only store · Upstash · local · seed fallback
-        └── packages/core         spec parser · deterministic checks · evidence · verdict
+        ├── packages/harness      adapters · Docker executor · proxy · capture · trace · diff
+        ├── packages/attribution  12 deterministic rules over trace + scorecard
+        ├── packages/replay       memoized counterfactual replay + proof
+        ├── packages/results      append-only store · reliability aggregation · seed fallback
+        └── packages/core         contracts · trace schemas · checks · evidence · verdict
         │
-        └── Upstash Redis         immutable scorecards + ranked indexes
+        └── Upstash Redis         immutable scorecards, traces, attribution, proofs + indexes
 ```
 
-Real adapter runs execute locally in Docker and write scorecards to Upstash. Vercel serves the UI, read APIs, and the self-serve fake baseline. The scoring engine receives normalized files, never an execution handle.
+Real adapter runs execute locally in Docker and write scorecards to Upstash. Vercel serves the UI, read APIs, and the self-serve fake baseline.
 
 Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/ADAPTERS.md`](docs/ADAPTERS.md), [`docs/SANDBOX.md`](docs/SANDBOX.md).
-
-## Live demo
-
-**<https://orivoxx.vercel.app>**
-
-The deployment is read-only for real results. The fake baseline is self-serve: `/submit` creates a real, immutable scorecard without a model call. Real adapter runs are organizer-executed in Docker, then published to the shared store.
 
 ## Quickstart
 
@@ -120,15 +195,15 @@ The deployment is read-only for real results. The fake baseline is self-serve: `
 
 ```bash
 git clone https://github.com/productivityapplications/Orivoxx.git
-cd orivoxx
+cd Orivoxx
 pnpm install --frozen-lockfile
 pnpm build
 pnpm dev
 ```
 
-Open <http://localhost:3000>. Without any environment variables the app serves the bundled seed rows and the fake baseline still works.
+Open <http://localhost:3000>. Without environment variables the app serves the bundled seed rows and the fake baseline still works.
 
-To configure the model provider and the shared store, copy `.env.example` to `.env.local` and fill in:
+For the provider and shared store, copy `.env.example` to `.env.local`:
 
 ```bash
 MODEL_PROVIDER=openrouter
@@ -139,8 +214,6 @@ UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 ```
 
-Only server-side variables are used. No secret is prefixed with `NEXT_PUBLIC_`.
-
 ### Run the fake baseline from the CLI
 
 ```bash
@@ -148,74 +221,77 @@ pnpm bench:list
 pnpm bench:run --task taskboard --adapter fake --variant compliant
 ```
 
-The fake baseline materializes a checked-in fixture, captures it, scores it deterministically, and appends the result. It never calls a model.
-
 ## Run a real agent
 
 ```bash
-# Build the sandbox image once (Node 24, Python 3.12, Aider 0.86.2)
 pnpm --filter @orivoxx/harness build
 pnpm --filter @orivoxx/harness sandbox:build
 
-# Head-to-head: same model, two harnesses
+# Baseline
 pnpm bench:run --task taskboard --adapter python-openrouter --model openai/gpt-4o-mini
-pnpm bench:run --task taskboard --adapter aider-openrouter  --model openai/gpt-4o-mini
 
-# Same harness, different model
-pnpm bench:run --task taskboard --adapter python-openrouter --model deepseek/deepseek-chat-v3-0324
+# Inject a transient tool failure and produce an attribution + proof
+pnpm bench:run --task taskboard --adapter python-openrouter \
+  --model deepseek/deepseek-chat-v3-0324 --chaos tool_error
+
+# Head-to-head: same model, two harnesses
+pnpm bench:run --task taskboard --adapter aider-openrouter --model openai/gpt-4o-mini
 ```
 
-Recorded on 15 November 2026:
+Recorded on 15–18 November 2026:
 
-| Adapter | Model | Overall | Spec / Sec / Maint | Caps |
-|---|---|---|---|---|
-| `python-openrouter` | `openai/gpt-4o-mini` | **97.3** | 100 / 100 / 82.0 | none |
-| `aider-openrouter` | `openai/gpt-4o-mini` | **97.3** | 100 / 100 / 82.0 | none |
-| `python-openrouter` | `deepseek/deepseek-chat-v3-0324` | **98.1** | 100 / 100 / 87.1 | none |
+| Adapter | Model | Chaos | Overall | Result | Proof |
+|---|---|---|---:|---|---|
+| python-openrouter | openai/gpt-4o-mini | none | 96.4 | `res_df4fc568…` | — |
+| python-openrouter | deepseek/deepseek-chat-v3-0324 | tool_error | 49.7 | `res_64068a9c…` | **98.3 PASS** |
+| python-openrouter | openai/gpt-4o-mini | tool_error | 49.9 | `res_0427d9f5…` | 59.9 (insufficient) |
+| python-openrouter | openai/gpt-4o-mini | latency | 59.9 | `res_7607dd55…` | — |
+| python-openrouter | openai/gpt-4o-mini | context_pressure | 94.9 | `res_186441ae…` | — |
+| python-openrouter | deepseek/deepseek-chat-v3-0324 | none | 98.1 | `res_71626175…` | — |
+| aider-openrouter | openai/gpt-4o-mini | none | 97.3 | `res_a39c6e29…` | — |
 
-The first two rows are the head-to-head pair: one model slug, two harnesses. Model identity is recorded per run; no slug is a product invariant.
+The insufficient 49.9 proof is shown honestly: that generated project route did not satisfy the critical marker even after retry, so the harness cell is rule-matched but not proven.
 
 ## Adding a benchmark task
 
-1. Create `packages/benchmarks/src/tasks/<task-id>/` with `PROJECT_SPEC.md`, `starting/`, `fixtures/`, `index.ts`, and `generated.ts`.
-2. Declare requirements and deterministic checks in the task builder. Requirement ids are immutable per task version.
-3. Add a compliant fixture and a regressed fixture. Fixtures are synthetic and publicly redistributable.
-4. Set `rulesetVersion` and `scoringConfigVersion`; changing any rule or weight requires a version bump.
-5. Register the task in `packages/benchmarks/src/tasks/index.ts`.
-6. Add fixture tests: the compliant fixture must pass every check; the regressed fixture must fail the declared criticals.
-7. Record a run: `pnpm bench:run --task <id> --adapter fake --variant compliant`.
+1. Create `packages/benchmarks/src/tasks/<task-id>/` with `PROJECT_SPEC.md`, `starting/`, `fixtures/`, `index.ts`, `generated.ts`.
+2. Declare requirements and deterministic checks. Requirement ids are immutable per task version.
+3. Add compliant and regressed fixtures.
+4. Set `rulesetVersion` and `scoringConfigVersion`; changing a rule or weight requires a bump.
+5. Register the task and add fixture tests.
+6. Record a run.
 
-Authoring template: [`docs/BENCHMARK_TASK_TEMPLATE.md`](docs/BENCHMARK_TASK_TEMPLATE.md).
+Template: [`docs/BENCHMARK_TASK_TEMPLATE.md`](docs/BENCHMARK_TASK_TEMPLATE.md).
 
 ## Adding an adapter
 
 1. Add `packages/harness/src/adapters/<id>.ts` with a factory that validates its model and returns one argv command.
 2. Register it in `src/adapters/registry.ts`.
 3. Put the agent entry point in `packages/harness/agents/` and copy it into `docker/sandbox.Dockerfile` if it runs in the image.
-4. Add unit tests for plan shape, network requirement, model binding, and secret handling.
-5. Document it in [`docs/ADAPTERS.md`](docs/ADAPTERS.md) and record a real run.
+4. Emit trace events to `ORIVOXX_TRACE_FILE`; model calls are recorded by the proxy.
+5. Add plan/network/model-binding tests and record a real run.
 
-Adapters never receive a provider key. Model calls go through the allowlisted proxy with the sentinel `orivoxx-sandbox-proxy`.
+Adapters never receive a provider key. Model calls use the sentinel `orivoxx-sandbox-proxy` through the allowlisted proxy.
 
 ## The deterministic guarantee
 
-- The score module imports only deterministic task, rule, and result types. A test asserts that its import graph contains no provider or adapter module.
-- A deterministic `FAIL` overrides any model claim. Model output cannot create requirement ids, source paths, line references, check rules, verdicts, or scores.
+- The score module imports only deterministic task, rule, and result types. A test asserts its import graph contains no provider or adapter module.
+- A deterministic `FAIL` overrides any model claim. Model output cannot create requirement ids, paths, verdicts, or scores.
 - Missing evidence is `UNVERIFIED`, never `PASS`.
-- Re-running the same captured repository with the same versions produces the same score.
-- Every leaderboard-valid result records `taskVersion`, `rulesetVersion`, `scoringConfigVersion`, `adapterVersion`, and `repositoryFingerprint`. A row missing any of them is rejected by the schema.
+- Replay reproduces the baseline exactly with no intervention; the proof is a second deterministic score.
+- Every leaderboard-valid result records task/ruleset/scoring/adapter versions and a repository fingerprint.
 
 ## The sandbox guarantee
 
-- Only `packages/harness` executes an agent, and only through `DockerExecutor`.
-- Non-root uid 10001, read-only root filesystem, bounded tmpfs `/tmp`, CPU/memory/PID/file-descriptor quotas, and a wall-clock kill.
-- No platform secrets, no Docker socket, no host filesystem mount beyond the run workspace.
-- The agent container has no internet route. The proxy sidecar is the only egress and forwards only `/v1/*` with bounded bodies.
-- The scoring engine never runs produced code, tests, builds, or package installs.
+- Only `packages/harness` executes an agent, only through `DockerExecutor`.
+- Non-root uid 10001, read-only rootfs, bounded tmpfs `/tmp`, quotas, wall-clock kill.
+- No platform secrets, no Docker socket, no host mount beyond the run workspace.
+- The agent has no internet route; the proxy sidecar is the only egress and forwards only `/v1/*`.
+- The scoring engine never runs produced code, tests, builds, or installs.
 
 ## Results, retention, and privacy
 
-A stored result contains a bounded scorecard, requirement outcomes, cap reasons, structural metrics, run metadata, adapter/model identity, version fields, and the produced-code diff as bounded text. It never contains full source trees, archives, prompts, raw model responses, or keys. Retention is 90 days. The store interface is append-only.
+A result stores a bounded scorecard, trace events (redacted summaries), six metrics, chaos metadata, attribution, proof, and the diff as text. It never stores raw source trees, prompts, tool contents, or keys. Retention is 90 days. The store is append-only.
 
 Full detail: [`docs/RESULTS_RETENTION.md`](docs/RESULTS_RETENTION.md) and [`PRIVACY_NOTICE.md`](PRIVACY_NOTICE.md).
 
@@ -223,56 +299,58 @@ Full detail: [`docs/RESULTS_RETENTION.md`](docs/RESULTS_RETENTION.md) and [`PRIV
 
 | Route | Method | Purpose |
 |---|---|---|
-| `/api/v1/tasks` | GET | Task catalogue with version fields |
+| `/api/v1/tasks` | GET | Task catalogue |
 | `/api/v1/tasks/:id` | GET | Spec, requirements, starting files |
-| `/api/v1/leaderboard` | GET | Ranked rows (`taskId`, `kind`, `limit`) |
-| `/api/v1/results` | GET | Same projection as the leaderboard |
-| `/api/v1/results/:id` | GET | Full stored result |
-| `/api/v1/runs` | POST | Fake baseline run (`taskId`, `variant`) |
-| `/api/v1/health` | GET | Provider and store status, no secrets |
-
-Mutating routes require a same-origin request, a JSON body under 4 KiB, and shared rate limiting in production. Every response is `cache-control: no-store`.
+| `/api/v1/leaderboard` | GET | Ranked rows + reliability profiles |
+| `/api/v1/results` | GET | Same projection |
+| `/api/v1/results/:id` | GET | Full result incl. trace, metrics, attribution |
+| `/api/v1/runs` | POST | Fake baseline run |
+| `/api/v1/compare` | GET | Two results, metric deltas, attribution diff |
+| `/api/v1/attribute/:runId` | POST | Stored attribution for a result |
+| `/api/v1/replay` | POST | Stored counterfactual candidate |
+| `/api/v1/health` | GET | Provider/store status |
 
 ## Project structure
 
 ```text
-apps/web                 Next.js UI, read APIs, fake run endpoint
-packages/core            spec parser, deterministic checks, evidence, verdict
-packages/benchmarks      task registry, rulesets, score, static import graph
-packages/harness         adapters, Docker sandbox, proxy, capture, diff, CLI
-packages/results         result contracts, local/Upstash stores, seed fallback
-data/seed-results.json   recorded fake-baseline rows
-docs/                    architecture, scoring, sandbox, adapters, retention, UI spec
-demo/                    narrated demo video and production notes
+apps/web                 marketing, app home, product routes, read APIs
+packages/core            contracts, trace schemas, checks, evidence, verdict
+packages/benchmarks      tasks, rulesets, score, static graph
+packages/harness         adapters, Docker, proxy, capture, trace, diff
+packages/attribution     12 rules over trace + scorecard
+packages/replay          counterfactual replay + proof
+packages/results         result contracts, stores, reliability aggregation
+data/seed-results.json   recorded fake-baseline fallback rows
+docs/                    architecture, scoring, attribution, sandbox, UI references
+demo/                    narrated video, script, reference study
 ```
 
 ## Testing
 
 ```bash
-pnpm -r test        # 459 unit tests: core 217, benchmarks 63, results 53, harness 82, web 44
+pnpm -r test        # 480 unit tests
 pnpm -r typecheck
 pnpm -r lint
 pnpm -r build
 
-# End-to-end: submit -> run -> score -> leaderboard (throwaway local store)
-pnpm test:e2e
+pnpm test:e2e       # submit → run → score → leaderboard, dark/overflow checks
 
-# Docker sandbox integration suite (requires the image)
+# Docker integration (requires the image)
 pnpm --filter @orivoxx/harness sandbox:build
 ORIVOXX_DOCKER_TESTS=1 pnpm --filter @orivoxx/harness test
 ```
 
-The suite covers parser fixtures, deterministic precedence, malicious archives, oversized payloads, secret redaction, schema failures, provider timeouts, prompt injection, explanation independence, origin checks, rate limits, static import extraction, structural metrics, leaderboard ordering, version-field enforcement, sandbox quotas, artifact capture, adapter contracts, and responsive dark UI.
+The suite covers parser fixtures, deterministic precedence, malicious archives, secret redaction, schema failures, provider timeouts, prompt injection, origin checks, rate limits, static import extraction, structural metrics, leaderboard ordering, version-field enforcement, trace redaction, attribution fixtures, replay invariants, sandbox quotas, artifact capture, adapter contracts, and responsive dark UI.
 
 ## Hackathon
 
 Built for the **HackCulture AI Global Hackathon** — track: *Build a Benchmarking Platform for AI Agents, Not Just Models*. Deadline: 21 November 2026.
 
-- Deterministic scoring with no LLM in the score path.
-- A real Docker sandbox with an allowlisted model proxy.
-- Three adapters: fake baseline, Python agent loop, Aider.
-- A public leaderboard and result explorer.
-- Recorded real runs on one task, one model, two harnesses.
+- 20-cell attribution taxonomy with counterfactual proof.
+- Six metrics, three chaos modes, reliability profile.
+- Real Docker sandbox with an allowlisted model proxy.
+- Three adapters; recorded runs and an honest insufficient proof.
+- Complete marketing landing and app home.
 
 More: [`docs/HACKATHON.md`](docs/HACKATHON.md).
 
@@ -287,4 +365,4 @@ MIT © 2026 Orivoxx Contributors. See [`LICENSE`](LICENSE).
 - [Aider](https://aider.chat/) as a benchmarked harness
 - [OpenRouter](https://openrouter.ai/) for the OpenAI-compatible model API
 - [Upstash](https://upstash.com/) for the shared result store and rate limiting
-- [fflate](https://github.com/101arrowz/fflate) for bounded ZIP parsing
+- [ElevenLabs](https://elevenlabs.io/) for narration

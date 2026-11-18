@@ -1,97 +1,108 @@
 # Orivoxx demo — script
 
-Voice: ElevenLabs `eleven_multilingual_v2`, voice id from `ELEVENLABS_VOICE_ID`.
-Pronunciation: “OR-ih-vox”. Casing: Orivoxx.
-Tone: calm, precise, explanatory. No hype, no exclamation marks.
-Total target: 2:35–2:45. Hard limit: 3:00.
-Captions: Inter, lower third, 3–7 words per phrase, matching the audio.
+Voice: ElevenLabs `eleven_multilingual_v2`, voice ID `SOYHLrjzK2X1ezoPC6cr` (“Harry”, premade).
+Pronunciation: “OR-ih-vox”. Casing: Orivoxx. Tone: calm, precise, explanatory.
+Final cut: 2:21.5, 1920×1080, 30 fps, −15.9 LUFS, true peak −1.5 dBTP.
+Reference study: `demo/REFERENCE_NOTES.md`. Each scene names the technique it adapts.
 
-## Scene 1 — The problem (0:00–0:22)
+## Timing
 
-**Narration**
+| Scene | In | Out | Audio | Visual |
+|---|---:|---:|---:|---|
+| 1 Problem | 0:00 | 0:20 | 19.4s | Landing hero → problem diagram |
+| 2 Solution | 0:20 | 0:36 | 16.0s | Solution pillars → attribution card |
+| 3 Measurement | 0:36 | 0:59 | 22.6s | Six metrics → leaderboard reliability |
+| 4 One run | 0:59 | 1:18 | 17.9s | Real 96.4 result → metrics → trace |
+| 5 Attribution | 1:18 | 1:38 | 20.3s | Attributed 49.7 result → evidence |
+| 6 Replay | 1:38 | 1:55 | 16.6s | Replay 49.7 → 98.3, highlighted step |
+| 7 Reliability | 1:55 | 2:11 | 14.8s | Leaderboard bars → compare deltas |
+| 8 Close | 2:11 | 2:24 | 12.8s | App home → tagline |
 
-Most agent leaderboards compare models. They hold the harness constant, then report a single number. But the harness is part of the result. The same model can pass a specification with one tool loop, and miss a critical check with another. Orivoxx benchmarks the whole configuration: the model, the harness, the tools, the orchestration, and the stopping conditions.
-
-**Visual:** landing hero, then the leaderboard preview. Slow scroll from the tagline to the task cards.
-
-**Captions:** “Most agent leaderboards compare models” · “The harness is part of the result” · “Benchmark the whole configuration”
-
-## Scene 2 — Versioned tasks and the sandbox (0:22–0:44)
-
-**Narration**
-
-Every benchmark is a versioned task. TaskBoard asks an agent to build owner-scoped project access in a small Next.js app. The task pins its specification, its ruleset, and its scoring configuration. The agent runs inside a Docker sandbox with no platform secrets and no internet route. Its only model access is an allowlisted proxy.
-
-**Visual:** `/benchmarks`, then `/benchmarks/taskboard`. Scroll to the version strip and requirement table.
-
-**Captions:** “Every benchmark is a versioned task” · “Spec, ruleset, scoring config” · “No platform secrets” · “Model access through one proxy”
-
-## Scene 3 — Leaderboard (0:44–1:02)
+## Scene 1 — The problem (0:00–0:20)
 
 **Narration**
 
-Here is the leaderboard. One task, one model, two harnesses. The Python agent loop and Aider both score ninety-seven point three. A second run of the same Python harness on a different model scores ninety-eight point one. The model and the adapter are recorded on every row, so the comparison is explicit.
+Forty-seven steps. One failed artifact. The trace shows every hand-off, but it does not say which layer broke. Was it the model, the harness, a tool, or the specification itself? Orivoxx answers that with a deterministic benchmark and a counterfactual proof.
 
-**Visual:** `/leaderboard`. Move through the Agents, All, and Baselines filters. Hover a row, then open the Python result.
+**Visual:** landing hero, then the five-layer hand-off diagram.
 
-**Captions:** “One task, one model, two harnesses” · “Python and Aider: 97.3” · “Second model: 98.1” · “Model and adapter on every row”
+**Reference:** matches the question-first cold open (REFERENCE_NOTES 1.0–5.0s) and the dissolve into the problem diagram (16.65–17.05s). Deliberately different: dark UI, no white title card.
 
-## Scene 4 — The scorecard and the rules (1:02–1:26)
-
-**Narration**
-
-Open a result. The overall score is ninety-seven point three. Spec conformance and security both score one hundred. Maintainability scores eighty-two. Below the score, every requirement is a row. Expand it to see the declared rule, the source path, and the outcome. A critical failure would cap the score at fifty-nine point nine, and the cap would be shown above this number, never hidden.
-
-**Visual:** `/results/<python result>`. Scroll from the score to the version strip, then expand two requirement rows.
-
-**Captions:** “97.3 overall” · “Spec 100, security 100” · “Every requirement is a row” · “Caps are shown, never hidden”
-
-## Scene 5 — Static evidence (1:26–1:47)
+## Scene 2 — The solution (0:20–0:36)
 
 **Narration**
 
-The produced-code diff is stored as bounded text, and rendered as escaped text, never as HTML. The score is computed statically. No produced code is executed. No model is consulted. Running the same repository against the same versions gives the same score, and every row carries the fingerprint that ties it to that repository.
+Orivoxx benchmarks the whole agent configuration. A versioned task, a sandboxed run, and a static score with no model in the loop. Then it attributes the failure to one of twenty layer and mode cells, and proves the attribution with a replay.
 
-**Visual:** scroll through the diff, then the version strip and fingerprint. Return to the requirement list.
+**Visual:** solution pillars, then the real attribution card.
 
-**Captions:** “Diff is bounded text” · “No produced code executed” · “No model in the score” · “Fingerprint on every row”
+**Reference:** mirrors the reference's “one layer, zero hand-offs” solution section (≈39.0–55.5s): a thesis, three numbered rows, one artifact. The artifact is a real result, not a mock.
 
-## Scene 6 — Compare and self-serve (1:47–2:06)
-
-**Narration**
-
-Compare two harnesses on the same task. Bench deltas and a requirement matrix show exactly where they diverge. Then try it yourself. The fake baseline materializes a checked-in fixture, captures it, and scores it with the same pipeline. It makes no model call, and it creates a real, immutable result.
-
-**Visual:** `/compare?task=taskboard`, then `/submit`. Choose the regressed fixture, run it, and land on the capped result.
-
-**Captions:** “Same model, two harnesses” · “Bench deltas and a matrix” · “Fake baseline, no model call” · “A real immutable result”
-
-## Scene 7 — Under the hood (2:06–2:24)
+## Scene 3 — What it measures (0:36–0:59)
 
 **Narration**
 
-Under the hood, every run is versioned end to end. Task, ruleset, scoring configuration, and adapter version are recorded with the repository fingerprint. Results are append-only, and the diff is bounded text, never full source. Real runs execute in Docker; the public app only reads.
+Six metrics: artifact score, steps, tool calls, tokens, cost, and duration. Three chaos modes: tool errors, latency, and context pressure. Across runs, those become a reliability profile: pass at k, score spread, and the layer distribution behind every failure.
 
-**Visual:** a capped TaskBoard result (59.9), cap banner, version strip, then `/docs/scoring`.
+**Visual:** measurement grid, then the leaderboard preview with reliability bars.
 
-**Captions:** “Versioned end to end” · “Fingerprint on every row” · “Append-only results” · “Real runs in Docker”
+**Reference:** matches the measured, list-like explanation cadence (138 WPM, 1–2s pauses; REFERENCE_NOTES “Narration cadence”). Captions are word-synced.
 
-## Scene 8 — Close (2:24–2:39)
+## Scene 4 — One run (0:59–1:18)
 
 **Narration**
 
-Orivoxx. Benchmark the agent, not just the model. Deterministic scoring, sandboxed execution, and every point traceable to a named rule and evidence. The source, the tasks, and the recorded results are public.
+One task, one agent, one model. The agent runs in Docker, with no platform secrets and no internet route. Every model call passes through one allowlisted proxy. The harness records the trace, captures the repository, and scores it statically.
 
-**Visual:** `/docs` scoring section, then the home leaderboard. End on the tagline.
+**Visual:** a real 96.4 result: scorecard, six metrics, trace rows.
 
-**Captions:** “Benchmark the agent” · “Not just the model” · “Every point traceable”
+**Reference:** the reference holds a single product surface for 12–15s (23.5–39.0s; 96.5–108.5s). This scene holds one result page and scrolls it, rather than cutting every 2s.
+
+## Scene 5 — Attribution (1:18–1:38)
+
+**Narration**
+
+This run fails at forty-nine point seven. The attribution says harness, recovery. Evidence: step two, a write fails with EACCES, and the harness never retries. No guessed root cause. One cell, one rule, one recorded step.
+
+**Visual:** the attributed 49.7 result, attribution card, evidence and trace highlight.
+
+**Reference:** matches the reference's “verdict at the top is written from the numbers” pattern (25.9–31.0s): the conclusion is visible before the supporting detail. The supporting detail is a real trace, not an animated chart.
+
+## Scene 6 — Replay (1:38–1:55)
+
+**Narration**
+
+The proof is a replay. Steps before the intervention are byte-identical. At step two, we retry the failed write. The remaining actions replay from the record, and the same deterministic engine scores ninety-eight point three. No model call.
+
+**Visual:** replay page: 49.7 → 98.3, intervention at step 2, highlighted trace rows.
+
+**Reference:** matches the reference's proof-by-side-by-side card (115–120s) with a dark, technical treatment instead of a white card.
+
+## Scene 7 — Reliability (1:55–2:11)
+
+**Narration**
+
+Across runs, the leaderboard shows the reliability profile, not a single lucky score. The stacked bar is the layer distribution behind the failures. Compare two agents and the attribution diff shows which layer keeps breaking.
+
+**Visual:** leaderboard reliability bars, then compare metrics and attribution cards.
+
+**Reference:** matches the reference's “two independent figures, side by side” (115–126s), adapted to a leaderboard plus comparison.
+
+## Scene 8 — Close (2:11–2:24)
+
+**Narration**
+
+Orivoxx. Benchmark the agent, not just the model. Run it, attribute it, replay it. The source, the tasks, and the proofs are public at orivoxx dot vercel dot app.
+
+**Visual:** app home recent runs, then the landing tagline.
+
+**Reference:** matches the plain-text URL outro (148–153s), held, with no CTA button or logo sting. Deliberately different: dark product, not a white end card.
 
 ## Production notes
 
-- Generate one audio file per scene. Scene duration = audio + 0.45 s hold.
-- Narration provider: ElevenLabs was attempted first. The configured voice is a library voice that the free plan rejects (HTTP 402), and the remaining character quota covered only three scenes. The shipped narration is the local Piper fallback, one consistent voice for all eight scenes. See `demo/README.md`.
-- Record one Playwright video per scene at 1920×1080. Trim to the scene duration; if short, hold the last frame.
-- Normalize the final mix to −16 LUFS, true peak −1.5 dB.
-- No music. No talking head. No stock footage. Hard cuts only.
-- Burn captions into the video with Inter at 46 px, white on a 55% black plate, bottom center.
-- Keep the toolbar out of frame: viewport is the app, not browser chrome.
+- Audio: ElevenLabs `with-timestamps`, one file per scene; word timings drive ASS karaoke captions.
+- Video: Playwright at 1920×1080, each scene held to `audio + 0.45s`.
+- Captions: Inter 44px, white primary / muted secondary, semi-transparent band, 0.35s cross-dissolves.
+- Music: original generated ambient bed at `volume=0.22`, mixed under narration; no licensed track.
+- Final: `loudnorm=I=-16:TP=-1.5:LRA=11`.
+- No Talking head, no stock footage, no mock dashboards.

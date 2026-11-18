@@ -22,32 +22,34 @@
   --color-progress: var(--status-progress);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-instrument);
 }
 
 :root {
-  --bg-app: #0b0d10;
-  --bg-sidebar: #101319;
-  --bg-panel: #151922;
-  --bg-raised: #1b202a;
-  --bg-inset: #0d1117;
-  --bg-canvas: #0d1117;
-  --border-subtle: #282f3a;
-  --border-strong: #3a4351;
-  --text-primary: #f2f4f8;
-  --text-secondary: #b0b8c5;
-  --text-muted: #808a99;
-  --accent: #a78bfa;
+  --bg-app: #0b0b09;
+  --bg-sidebar: #0e0e0c;
+  --bg-panel: #111110;
+  --bg-raised: #171715;
+  --bg-inset: #0e0e0c;
+  --bg-canvas: #0b0b09;
+  --border-subtle: #262622;
+  --border-strong: #3a3a34;
+  --text-primary: #e1e1db;
+  --text-secondary: #b0b0a8;
+  --text-muted: #8c8c85;
+  --accent: #17cf97;
   --accent-secondary: #75a7ff;
-  --status-pass: #48c9a4;
-  --status-fail: #ff5d6c;
-  --status-drift: #ff7a86;
+  --status-pass: #17cf97;
+  --status-fail: #ff5c5c;
+  --status-drift: #ff8a7a;
   --status-warning: #f3c66d;
   --status-progress: #9d8bff;
-  --status-neutral: #8792a2;
+  --status-neutral: #8c8c85;
 }
 
 html {
   color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -63,7 +65,7 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 *:focus-visible {
@@ -72,6 +74,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {

@@ -1,3 +1,4 @@
+export * from "./aggregate.js";
 export * from "./contracts.js";
 export * from "./id.js";
 export * from "./local.js";

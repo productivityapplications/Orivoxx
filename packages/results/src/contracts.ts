@@ -6,6 +6,12 @@ import {
   SemverSchema,
   type ScoreResult,
 } from "@orivoxx/benchmarks";
+import {
+  AttributionSchema,
+  ChaosMetadataSchema,
+  RunMetricsSchema,
+  TraceSchema,
+} from "@orivoxx/core";
 
 export const RESULT_SCHEMA_VERSION = "1.0.0" as const;
 export const SEED_SCHEMA_VERSION = "1.0.0" as const;
@@ -130,6 +136,10 @@ const LeaderboardFields = {
   capsApplied: z.array(CapReasonSchema).max(2),
   appliedCap: z.number().min(0).max(100).nullable(),
   tally: RequirementTallySchema,
+  metrics: RunMetricsSchema.optional(),
+  chaos: ChaosMetadataSchema.optional(),
+  attribution: AttributionSchema.nullable().optional(),
+  attributionReason: z.string().max(300).nullable().optional(),
 } as const;
 
 export const LeaderboardEntrySchema = z.object(LeaderboardFields).strict();
@@ -141,6 +151,12 @@ export const BenchmarkResultSchema = z
     ...LeaderboardFields,
     score: ScoreResultSchema,
     diff: DiffSummarySchema,
+    trace: TraceSchema.optional(),
+    traceTruncated: z.boolean().optional(),
+    metrics: RunMetricsSchema.optional(),
+    chaos: ChaosMetadataSchema.optional(),
+    attribution: AttributionSchema.nullable().optional(),
+    attributionReason: z.string().max(300).nullable().optional(),
   })
   .strict()
   .superRefine((result, context) => {
@@ -288,6 +304,12 @@ export function toLeaderboardEntry(result: BenchmarkResult): LeaderboardEntry {
     capsApplied: result.capsApplied,
     appliedCap: result.appliedCap,
     tally: result.tally,
+    ...(result.metrics === undefined ? {} : { metrics: result.metrics }),
+    ...(result.chaos === undefined ? {} : { chaos: result.chaos }),
+    ...(result.attribution === undefined ? {} : { attribution: result.attribution }),
+    ...(result.attributionReason === undefined
+      ? {}
+      : { attributionReason: result.attributionReason }),
   });
 }
 
@@ -299,6 +321,12 @@ export interface BuildBenchmarkResultInput {
   run: RunSummary;
   score: ScoreResult;
   diff: DiffSummary;
+  trace?: BenchmarkResult["trace"];
+  traceTruncated?: boolean;
+  metrics?: BenchmarkResult["metrics"];
+  chaos?: BenchmarkResult["chaos"];
+  attribution?: BenchmarkResult["attribution"];
+  attributionReason?: string | null;
 }
 
 export function buildBenchmarkResult(
@@ -324,5 +352,13 @@ export function buildBenchmarkResult(
     tally: tallyRequirements(input.score),
     score: input.score,
     diff: input.diff,
+    ...(input.trace === undefined ? {} : { trace: input.trace }),
+    ...(input.traceTruncated === undefined ? {} : { traceTruncated: input.traceTruncated }),
+    ...(input.metrics === undefined ? {} : { metrics: input.metrics }),
+    ...(input.chaos === undefined ? {} : { chaos: input.chaos }),
+    ...(input.attribution === undefined ? {} : { attribution: input.attribution }),
+    ...(input.attributionReason === undefined
+      ? {}
+      : { attributionReason: input.attributionReason }),
   });
 }

@@ -173,6 +173,56 @@ export const DOC_SECTIONS: DocSection[] = [
     ],
   },
   {
+    slug: "attribution",
+    title: "Attribution",
+    summary: "The 5×4 taxonomy and the deterministic rules behind every cell.",
+    blocks: [
+      { type: "p", text: "Attribution answers where a failure entered the agent configuration and what kind of mistake it was. A trace shows the hand-offs; attribution names the layer and the mode, then attaches evidence from the recorded steps." },
+      { type: "h2", text: "Layers" },
+      { type: "list", items: ["Spec — contradictory, ambiguous, or underspecified task", "Model — wrong reasoning, ignored instruction, hallucinated API", "Harness — swallowed error, no retry, bad stopping condition, dropped state", "Tool — wrong result or the tool's own failure", "Environment — network, timeout, quota, or external nondeterminism"] },
+      { type: "h2", text: "Modes" },
+      { type: "list", items: ["Decision — wrong choice among viable options", "Execution — correct choice, failed to execute", "Recovery — should have recovered from a fault, did not", "Detection — should have noticed an inconsistency, did not"] },
+      { type: "p", text: "Twenty cells. Twelve rules ship today, including tool_error_unhandled (harness × recovery), step_limit_hit (harness × execution), hallucinated_api (model × decision), and misleading_spec_followed (spec × detection). A rule that matches without a counterfactual is medium confidence and is never presented as proven." },
+    ],
+  },
+  {
+    slug: "replay-proof",
+    title: "Replay & proof",
+    summary: "How a counterfactual proves an attribution without a model call.",
+    blocks: [
+      { type: "p", text: "An attribution without a counterfactual is an opinion. Replay takes the recorded text actions, applies them to a fresh in-memory file map, intervenes at one step, and scores with the same deterministic engine." },
+      { type: "code", label: "proof", text: "baseline: 49.7 (failed)\nintervention: retry write_file at step 2\nreplay: steps 2-7 (6 actions)\ncounterfactual: 98.3 (passed, threshold 70)" },
+      { type: "p", text: "Steps before the intervention are byte-identical by construction. Replay makes no model call, executes no produced code, and writes nothing to disk. If no intervention crosses the threshold, the result is unattributed." },
+    ],
+  },
+  {
+    slug: "reliability",
+    title: "Reliability profile",
+    summary: "pass@k, score spread, layer distribution, and chaos sensitivity.",
+    blocks: [
+      { type: "p", text: "A single score is a sample. The reliability profile aggregates stored runs for one adapter and task: artifact score mean and standard deviation, pass@k (score above the threshold and a completed exit), the distribution of attributed layers, pass rate per chaos condition, and the trend across the run window." },
+      { type: "p", text: "The leaderboard's stacked bar is that layer distribution. Green is not used for the bar: spec is violet, model blue, harness red, tool amber, environment neutral. A profile with one run is labelled with its run count, not presented as stability." },
+    ],
+  },
+  {
+    slug: "metrics-traces",
+    title: "Metrics & traces",
+    summary: "Six metrics, redaction, and the trace event model.",
+    blocks: [
+      { type: "list", items: ["Artifact score, steps, tool calls, tool error rate, prompt/completion tokens, cost, duration", "RunStarted, ModelCallStarted/Finished, ToolCallStarted/Finished, StepCompleted, ChaosInjected, RunFinished", "Every tool argument and result is a summary; content-bearing fields carry redacted: true", "The agent trace is excluded from the produced repository before capture"] },
+      { type: "p", text: "Token and cost metrics come from the provider's usage object through the allowlisted proxy. If the proxy trace is missing, the result is still scored and attribution is reported as unavailable." },
+    ],
+  },
+  {
+    slug: "resilience",
+    title: "Resilience testing",
+    summary: "Three chaos modes and what each one tests.",
+    blocks: [
+      { type: "list", items: ["tool_error — one write fails with EACCES; tests recovery and retry policy", "latency — every model call is delayed; tests the stopping policy and budget guards", "context_pressure — context is truncated and the step budget shrinks; tests completeness and detection"] },
+      { type: "p", text: "Chaos injections are labelled ground truth. The attribution engine is measured against those labels; precision (the proof crosses the threshold) and recall (the expected cell is named) are reported separately in the build log." },
+    ],
+  },
+  {
     slug: "results-retention",
     title: "Results and retention",
     summary: "What is stored, where, for how long, and what is never stored.",

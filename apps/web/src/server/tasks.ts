@@ -20,6 +20,7 @@ export interface TaskSummaryView {
   benchCounts: { spec: number; security: number };
   timeLimitSeconds: number;
   pinned: boolean;
+  passThreshold: number;
 }
 
 export interface TaskRequirementView {
@@ -92,6 +93,7 @@ export function taskSummaries(): TaskSummaryView[] {
     benchCounts: task.benchCounts,
       timeLimitSeconds: task.timeLimitSeconds,
       pinned: task.pinned,
+      passThreshold: 70,
     }))
     .sort((left, right) => displayOrder(left) - displayOrder(right) || left.id.localeCompare(right.id));
 }
@@ -127,6 +129,7 @@ export function taskDetail(taskId: string): TaskDetailView | null {
     },
     timeLimitSeconds: task.manifest.timeLimitSeconds,
     pinned: false,
+    passThreshold: 70,
     specText: task.specText,
     network: task.manifest.network,
     maxSteps: task.manifest.maxSteps,

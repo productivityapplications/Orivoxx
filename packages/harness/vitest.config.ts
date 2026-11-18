@@ -12,6 +12,12 @@ export default defineConfig({
       "@orivoxx/results": fileURLToPath(
         new URL("../results/src/index.ts", import.meta.url),
       ),
+      "@orivoxx/replay": fileURLToPath(
+        new URL("../replay/src/index.ts", import.meta.url),
+      ),
+      "@orivoxx/attribution": fileURLToPath(
+        new URL("../attribution/src/index.ts", import.meta.url),
+      ),
     },
   },
   test: {

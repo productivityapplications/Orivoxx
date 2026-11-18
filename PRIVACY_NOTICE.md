@@ -6,9 +6,12 @@ Orivoxx is a public benchmark for AI software-engineering agents. The benchmark 
 
 ## What is stored
 
-- **Benchmark scorecards:** task/ruleset/adapter/scoring versions, model identity, timestamps, the numeric score, per-requirement outcomes, cap reasons, structural metrics, and a bounded produced-code diff as text.
+- **Benchmark scorecards:** task/ruleset/adapter/scoring versions, model identity, timestamps, the numeric score, per-requirement outcomes, cap reasons, structural metrics, six run metrics, and a bounded produced-code diff as text.
+- **Trace summaries:** ordered, redacted events (model timing/tokens/cost, tool names, paths, byte counts, status/error class). Tool content, prompts, and model output are never included.
+- **Attribution and proof:** layer × mode, evidence step indices, the intervention, and the baseline/counterfactual scores.
 - **Repository fingerprint:** a SHA-256 fingerprint of the captured repository, used to tie a score to an artifact.
 - **No full artifacts:** Orivoxx does not store the full produced repository, ZIP bytes, raw agent stdout/stderr, raw prompts, or raw model responses. The result stores only a bounded run summary (status, exit code, duration).
+- **Replay action log:** full write actions are held in harness memory during the organizer run, used for the counterfactual, and deleted. They are never persisted or published.
 - **No user uploads in the scoring engine:** the public fake-adapter path scores a bundled synthetic task. Real adapters are organizer-executed on a local build machine; their scorecards are published to the shared leaderboard store.
 
 The public leaderboard store is Upstash Redis. A checked-in seed file keeps the leaderboard readable if Redis is cold or unavailable.

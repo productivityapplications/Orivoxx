@@ -14,6 +14,9 @@ import { createRequire } from "node:module";
 
 import { SCENES } from "./narration.mjs";
 
+const ATTRIBUTED_ID = "res_64068a9c11d744aa8c0391efa0bc04a4";
+const BASELINE_ID = "res_df4fc568db41468ba499223509bcdd7e";
+
 const requireFromWeb = createRequire(
   new URL("../../apps/web/package.json", import.meta.url),
 );
@@ -40,7 +43,7 @@ async function durationOf(file) {
     "format=duration",
     "-of",
     "default=nw=1:nk=1",
-    resolve(audioDirectory, file.replace(/\.mp3$/, ".wav")),
+    resolve(audioDirectory, file),
   ]);
 
   return Number.parseFloat(stdout.trim());
@@ -131,85 +134,74 @@ for (const scene of SCENES) {
     switch (scene.id) {
       case "01": {
         await open(page, "/");
-        await page.waitForTimeout(seconds * 180);
-        await scrollBy(page, 620);
+        await page.waitForTimeout(seconds * 150);
+        await page.mouse.wheel(0, 760);
         await page.waitForTimeout(seconds * 120);
+        await page.mouse.wheel(0, 900);
+        await page.waitForTimeout(seconds * 90);
         break;
       }
       case "02": {
-        await open(page, "/benchmarks");
-        await page.waitForTimeout(seconds * 160);
-        await page.getByRole("link", { name: /TaskBoard/i }).first().click();
-        await page.waitForURL("**/benchmarks/taskboard");
-        await page.waitForTimeout(seconds * 160);
-        await page.mouse.wheel(0, 520);
+        await open(page, "/");
         await page.waitForTimeout(seconds * 120);
+        await page.mouse.wheel(0, 1900);
+        await page.waitForTimeout(seconds * 150);
+        await page.mouse.wheel(0, 700);
+        await page.waitForTimeout(seconds * 100);
         break;
       }
       case "03": {
-        await open(page, "/leaderboard");
+        await open(page, "/");
+        await page.waitForTimeout(seconds * 100);
+        await page.mouse.wheel(0, 3000);
         await page.waitForTimeout(seconds * 180);
-        await page.getByRole("link", { name: "All", exact: true }).click();
-        await page.waitForTimeout(seconds * 110);
-        await page.getByRole("link", { name: "Baselines", exact: true }).click();
-        await page.waitForTimeout(seconds * 110);
-        await page.getByRole("link", { name: "Agents", exact: true }).click();
-        await page.waitForTimeout(seconds * 130);
-        await page.getByRole("link", { name: "97.3" }).first().hover();
-        await page.waitForTimeout(seconds * 90);
+        await page.mouse.wheel(0, 700);
+        await page.waitForTimeout(seconds * 100);
         break;
       }
       case "04": {
-        await open(page, `/results/${pythonResult.resultId}`);
-        await page.waitForTimeout(seconds * 140);
-        await page.mouse.wheel(0, 420);
-        await page.waitForTimeout(seconds * 100);
-        const rows = page.locator('button[aria-expanded]');
-        await rows.nth(1).click();
-        await page.waitForTimeout(seconds * 110);
-        await rows.nth(2).click();
-        await page.waitForTimeout(seconds * 110);
+        await open(page, `/results/${BASELINE_ID}`);
+        await page.waitForTimeout(seconds * 150);
+        await page.mouse.wheel(0, 560);
+        await page.waitForTimeout(seconds * 130);
+        await page.mouse.wheel(0, 500);
+        await page.waitForTimeout(seconds * 120);
         break;
       }
       case "05": {
-        await open(page, `/results/${pythonResult.resultId}`);
-        await page.waitForTimeout(seconds * 120);
-        await page.mouse.wheel(0, 900);
+        await open(page, `/results/${ATTRIBUTED_ID}`);
+        await page.waitForTimeout(seconds * 130);
+        await page.mouse.wheel(0, 720);
+        await page.waitForTimeout(seconds * 150);
+        await page.mouse.wheel(0, 220);
         await page.waitForTimeout(seconds * 100);
-        await page.mouse.wheel(0, 700);
-        await page.waitForTimeout(seconds * 140);
         break;
       }
       case "06": {
-        await open(page, "/compare?task=taskboard");
+        await open(page, `/replay/${ATTRIBUTED_ID}`);
         await page.waitForTimeout(seconds * 170);
-        await page.mouse.wheel(0, 500);
-        await page.waitForTimeout(seconds * 90);
-        await open(page, "/submit");
+        await page.mouse.wheel(0, 520);
         await page.waitForTimeout(seconds * 120);
-        await page.getByText("Regressed", { exact: true }).click();
-        await page.waitForTimeout(seconds * 80);
-        await page.getByRole("button", { name: /Run fake baseline/i }).click();
-        await page.waitForURL("**/results/**", { timeout: 60_000 });
-        await page.waitForTimeout(seconds * 120);
+        await page.mouse.wheel(0, 600);
+        await page.waitForTimeout(seconds * 100);
         break;
       }
       case "07": {
-        await open(page, `/results/${cappedResult.resultId}`);
-        await page.waitForTimeout(seconds * 260);
-        await page.mouse.wheel(0, 320);
+        await open(page, "/leaderboard");
+        await page.waitForTimeout(seconds * 160);
+        await page.mouse.wheel(0, 420);
         await page.waitForTimeout(seconds * 90);
-        await open(page, "/docs/scoring");
-        await page.waitForTimeout(seconds * 180);
+        await open(page, `/compare?task=taskboard&a=${BASELINE_ID}&b=${ATTRIBUTED_ID}`);
+        await page.waitForTimeout(seconds * 200);
         break;
       }
       case "08": {
+        await open(page, "/app");
+        await page.waitForTimeout(seconds * 180);
+        await page.mouse.wheel(0, 760);
+        await page.waitForTimeout(seconds * 100);
         await open(page, "/");
-        await page.waitForTimeout(seconds * 160);
-        await page.mouse.wheel(0, 260);
-        await page.waitForTimeout(seconds * 140);
-        await page.mouse.wheel(0, -400);
-        await page.waitForTimeout(seconds * 160);
+        await page.waitForTimeout(seconds * 170);
         break;
       }
       default:

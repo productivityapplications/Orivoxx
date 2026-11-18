@@ -15,6 +15,9 @@ One result is a JSON document produced by `runBenchmark()` and validated against
 | Score | `overall`, `benches`, `capsApplied`, `appliedCap`, `tally`, `score.requirements[]` | Published formula, one decimal place |
 | Evidence | Per-requirement status, rule id, and validated source references | Requirement ids come from the task, never the model |
 | Produced-code diff | `diff.text` unified diff, `diff.files[]` summary, counts, `truncated` | 256 KiB / 200 files / 400 lines per file |
+| Trace | ordered redacted events: model calls, tool calls, steps, chaos, totals | 500 events / 256 KiB |
+| Metrics | steps, tool calls, error rate, tokens, cost, duration, exit reason | integers / decimals |
+| Attribution + proof | layer × mode, evidence steps, intervention, baseline → counterfactual scores | one cell, max 12 evidence rows |
 
 The leaderboard index stores a projection without `score.requirements` and without `diff`, so a list read is bounded to a few hundred bytes per row.
 
@@ -22,6 +25,7 @@ The leaderboard index stores a projection without `score.requirements` and witho
 
 - Full source trees or ZIP archives.
 - Raw agent prompts, raw model responses, or provider request bodies.
+- Raw tool arguments/results, file contents, or the replay action log (held in memory only).
 - Provider API keys, Upstash tokens, or any secret candidate.
 - A server-side execution handle. The scoring engine consumes normalized text only.
 

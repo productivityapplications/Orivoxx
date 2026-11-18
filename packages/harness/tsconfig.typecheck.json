@@ -7,7 +7,9 @@
     "paths": {
       "@orivoxx/benchmarks": ["../benchmarks/src/index.ts"],
       "@orivoxx/core": ["../core/src/index.ts"],
-      "@orivoxx/results": ["../results/src/index.ts"]
+      "@orivoxx/results": ["../results/src/index.ts"],
+      "@orivoxx/replay": ["../replay/src/index.ts"],
+      "@orivoxx/attribution": ["../attribution/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"],

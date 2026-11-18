@@ -5,6 +5,10 @@ import {
   type Server,
 } from "node:http";
 
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
 
 import { startModelProxy, type ModelProxy } from "./proxy.js";
@@ -427,5 +431,50 @@ describe("model proxy upstream failures", () => {
     });
 
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("model proxy trace", () => {
+  it("records model-call timing, usage, and cost without request content", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "orivoxx-proxy-trace-"));
+    const traceFile = join(directory, "proxy.jsonl");
+
+    try {
+      const upstream = await startUpstream((_request, response) => {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(
+          JSON.stringify({
+            model: "openai/gpt-4o-mini",
+            choices: [{ finish_reason: "stop", message: { content: "ok" } }],
+            usage: { prompt_tokens: 12, completion_tokens: 3, cost: 0.00001 },
+          }),
+        );
+      });
+      cleanups.push(upstream.close);
+
+      const proxy = await startProxy({ baseUrl: `${upstream.url}/api/v1`, traceFile });
+
+      await fetch(`${proxy.url}/v1/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-orivoxx-step": "4" },
+        body: JSON.stringify({ model: "openai/gpt-4o-mini", messages: [{ role: "user", content: "secret prompt" }] }),
+      });
+
+      const lines = (await readFile(traceFile, "utf8")).trim().split("\n").map((line) => JSON.parse(line));
+
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toMatchObject({ type: "model_call_started", stepIndex: 4, model: "openai/gpt-4o-mini" });
+      expect(lines[1]).toMatchObject({
+        type: "model_call_finished",
+        stepIndex: 4,
+        promptTokens: 12,
+        completionTokens: 3,
+        costUsd: 0.00001,
+        finishReason: "stop",
+      });
+      expect(JSON.stringify(lines)).not.toContain("secret prompt");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

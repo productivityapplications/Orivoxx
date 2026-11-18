@@ -1,6 +1,10 @@
 # Orivoxx — Benchmark Suite
 
-**Status:** shipped benchmark contract. `packages/benchmarks` implements the task registry, rulesets, scoring configuration, and pure score function; `packages/harness` implements the adapters and Docker sandbox. The scorecard and leaderboard are live in `apps/web`. The exact model/provider is configuration, not a benchmark invariant.
+**Status:** shipped benchmark contract with failure attribution.
+
+## 0. Attribution layer
+
+The benchmark score is the substrate. On top of it, Orivoxx records a bounded trace, attributes a failure to one of 20 layer × mode cells, and proves the attribution with a counterfactual replay. Attribution and replay are deterministic and are specified in `docs/ATTRIBUTION_SPEC.md` and `docs/OBSERVABILITY_SPEC.md`. `packages/benchmarks` implements the task registry, rulesets, scoring configuration, and pure score function; `packages/harness` implements the adapters and Docker sandbox. The scorecard and leaderboard are live in `apps/web`. The exact model/provider is configuration, not a benchmark invariant.
 
 This document defines what each bench measures, how it is scored, and what it deliberately does **not** measure. The last part is as important as the first: a deterministic benchmark is only honest if its boundaries are explicit.
 

@@ -66,6 +66,7 @@ function printHelp() {
   --model <slug>             model override for a real adapter
   --variant <compliant|regressed>  fake adapter fixture (default: compliant)
   --time-limit <seconds>     override the task time limit
+  --chaos <kind>             none | tool_error | latency | context_pressure
   --no-store                 do not append the result
 `);
 }
@@ -121,6 +122,7 @@ const input = buildAdapterRunInput(task, {
   limits: options["time-limit"]
     ? { timeLimitSeconds: Number(options["time-limit"]) }
     : undefined,
+  chaos: options.chaos ?? "none",
 });
 
 const executor = isFake

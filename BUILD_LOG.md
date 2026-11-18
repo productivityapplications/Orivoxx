@@ -464,3 +464,54 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - Demo narration uses the Piper fallback because the ElevenLabs free quota was exhausted; documented in `demo/README.md`.
 - Vercel Deployment Protection is visible in the CLI metadata but the production URL is publicly reachable.
 - The repository needs a final `git push` (done in the audit sequence) and the human should confirm the MIT copyright holder.
+
+## 2026-11-18 — Attribution extension (post-P11)
+
+**Reference studies (mandatory, before code)**
+
+- `demo/REFERENCE_NOTES.md` — 17 cuts / 8.8s mean, ≈65% dissolves / ≈30% hard cuts, 138.3 WPM, 1.18s median pause, word-synced lower-third at 96% height, continuous bed ~5 dB under narration, URL-only outro.
+- `docs/UI_REFERENCE_NOTES.md` — Coderia: `#0B0B09` warm black, `#E1E1DB` text, `#17CF97` accent, Instrument Serif 60–70px + Geist 14px, 90px section rhythm, 1280px width, fade/translate motion.
+- `docs/APP_HOME_REFERENCE_NOTES.md` — Pass `/app`: six substantive numbered sections, embedded artifacts, orientation/action balance; Orivoxx plan 8 sections.
+- `docs/LANDING_REFERENCE_NOTES.md` — Pass `/`: problem → solution → how → features → CTA; Orivoxx plan 13 sections.
+
+**Shipped**
+
+- `packages/core/src/contracts/observability.ts` — trace event union, bounds, metrics derivation, tests.
+- `packages/core/src/contracts/attribution.ts` — 5×4 taxonomy, evidence, intervention, proof, reliability schemas.
+- `packages/results/src/aggregate.ts` — mean/std, pass@k, layer distribution, chaos sensitivity, trend.
+- `packages/harness`: proxy model trace, Docker trace mount, workspace trace/action collection, chaos env, `runAdapterDetailed`, attribution + replay proof in `runBenchmark`.
+- `packages/attribution` — 12 rules, 12 labeled fixtures (precision 1.0, recall 1.0), unavailable/unattributed paths.
+- `packages/replay` — deterministic replay, retry/stop/replacement interventions, no-intervention invariant, 5 tests.
+- `apps/web`: marketing landing `/`, app home `/app`, product route group, Coderia tokens/Instrument Serif, attribution card, six-metric grid, trace page, replay page, reliability leaderboard, compare deltas, docs sections, API routes (`attribute`, `replay`, `compare`).
+- `demo/`: new ElevenLabs narration (8 scenes, `with-timestamps`), ASS karaoke captions, dissolves, original ambient bed, 2:21.5 video.
+- README, SUBMISSION, PRIVACY, RESULTS_RETENTION, ARCHITECTURE, BENCHMARKS, HACKATHON, SANDBOX, ADAPTERS, AI_HANDOFF updated.
+
+**Real evidence**
+
+- `res_64068a9c11d744aa8c0391efa0bc04a4` — 49.7, `harness × recovery`, retry@2 → 98.3 PASS, 6 replayed steps.
+- `res_0427d9f5bf014f78ab8f630e8f101735` — 49.9, same cell, retry → 59.9 insufficient.
+- `res_df4fc568db41468ba499223509bcdd7e` — 96.4 baseline, 45 trace events, 15,438 tokens, $0.0028.
+- Real tool_error: 3 attributed, 1 proven → 33% precision, 100% cell recall. Fixture matrix 12/12 precision and recall. Both reported separately.
+
+**Verification**
+
+- 480 unit tests: core 223, benchmarks 63, results 57, attribution 5, replay 5, harness 83, web 44.
+- 5 Playwright E2E; 95 harness tests with Docker gate (12 integration).
+- `pnpm -r typecheck`, `pnpm -r lint`, `pnpm -r build` pass (build requires `AI_AGENT`/`AGENT`/`OPENCODE` unset to avoid the Next security nudge).
+- Deployed `https://orivoxx.vercel.app`: `/`, `/app`, `/benchmarks`, `/leaderboard`, `/compare`, attributed result, `/replay/:id`, `/docs/attribution`, `/api/v1/health` → 200; public fake run 201; cross-origin 403.
+- Video: 141.50s, 1920×1080, 30fps, H.264/AAC, −15.9 LUFS, −1.5 dBTP, 7.4 MiB.
+
+**Decisions**
+
+- Landing is marketing-only; the app moved to `/app`. Product routes use the app shell; marketing uses its own shell.
+- Attribution is deterministic and evidence-first. A rule-only match is medium confidence; a sufficient replay is high.
+- Replay actions are memory-only. Stored proof contains scores/intervention, not source.
+- The public fake run has no trace, so its result honestly reports `trace_unavailable` rather than inventing attribution.
+- The demo narration uses ElevenLabs with word timestamps; Piper remains a documented manual fallback only.
+- Next.js 16.4.2 is flagged by the CLI security advisory; upgrade not applied in this pass. Builds succeed with agent env unset. Recommendation and exact command are in the final report.
+
+**Known issues**
+
+- Real attribution precision is low on the small sample (1/3) because two generated project routes did not satisfy the critical marker even after retry; they are shown as insufficient, not hidden.
+- Leaderboard reliability groups mix pre-trace runs with traced runs; the run count makes this visible.
+- `middleware.ts` is deprecated in Next 16.4.2 in favour of `proxy`; warning only.

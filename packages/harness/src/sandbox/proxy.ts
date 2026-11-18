@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { appendFileSync } from "node:fs";
 import {
   createServer,
   request as httpRequest,
@@ -15,6 +17,8 @@ export interface ModelProxyOptions {
   maxRequestBytes?: number;
   maxResponseBytes?: number;
   upstreamTimeoutMs?: number;
+  /** Host-visible JSONL trace file for model-call events. */
+  traceFile?: string | null;
 }
 
 export interface ModelProxy {
@@ -96,6 +100,35 @@ function upstreamPath(base: URL, requestUrl: URL): string | null {
   return `${targetPath === "" ? "/" : targetPath}${requestUrl.search}`;
 }
 
+interface ModelTrace {
+  file: string | null;
+  nextStep: number;
+}
+
+function traceStep(request: IncomingMessage, trace: ModelTrace): number {
+  const header = request.headers["x-orivoxx-step"];
+  const parsed = typeof header === "string" ? Number.parseInt(header, 10) : Number.NaN;
+
+  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 500) {
+    return parsed;
+  }
+
+  trace.nextStep += 1;
+  return trace.nextStep;
+}
+
+function appendTrace(trace: ModelTrace, event: Record<string, unknown>): void {
+  if (trace.file === null) {
+    return;
+  }
+
+  try {
+    appendFileSync(trace.file, `${JSON.stringify(event)}\n`, "utf8");
+  } catch {
+    // Tracing must never take down the proxy.
+  }
+}
+
 function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -104,6 +137,7 @@ function handleRequest(
   maxRequestBytes: number,
   maxResponseBytes: number,
   upstreamTimeoutMs: number,
+  trace: ModelTrace,
 ): void {
   const requestUrl = new URL(request.url ?? "/", "http://sandbox.invalid");
 
@@ -187,6 +221,32 @@ function handleRequest(
     const body = Buffer.concat(chunks);
     headers["content-length"] = String(body.byteLength);
 
+    const stepIndex = traceStep(request, trace);
+    const startedAt = Date.now();
+    let model = "unknown";
+    let messagesHash = "0".repeat(64);
+
+    try {
+      const parsedBody = JSON.parse(body.toString("utf8")) as {
+        model?: unknown;
+        messages?: unknown;
+      };
+      model = typeof parsedBody.model === "string" ? parsedBody.model.slice(0, 200) : "unknown";
+      messagesHash = createHash("sha256")
+        .update(JSON.stringify(parsedBody.messages ?? []))
+        .digest("hex");
+    } catch {
+      // A non-JSON body still gets a call event with an unknown model.
+    }
+
+    appendTrace(trace, {
+      type: "model_call_started",
+      at: new Date(startedAt).toISOString(),
+      stepIndex,
+      model,
+      messagesHash,
+    });
+
     const transport = target.protocol === "https:" ? httpsRequest : httpRequest;
     const upstream = transport(
       target,
@@ -224,11 +284,54 @@ function handleRequest(
             return;
           }
 
+          const payload = Buffer.concat(responseChunks);
+          let promptTokens = 0;
+          let completionTokens = 0;
+          let costUsd = 0;
+          let finishReason = "unknown";
+
+          try {
+            const parsed = JSON.parse(payload.toString("utf8")) as {
+              usage?: {
+                prompt_tokens?: unknown;
+                completion_tokens?: unknown;
+                cost?: unknown;
+              };
+              choices?: { finish_reason?: unknown }[];
+            };
+            const usage = parsed.usage ?? {};
+            promptTokens =
+              typeof usage.prompt_tokens === "number" && usage.prompt_tokens >= 0
+                ? Math.trunc(usage.prompt_tokens)
+                : 0;
+            completionTokens =
+              typeof usage.completion_tokens === "number" && usage.completion_tokens >= 0
+                ? Math.trunc(usage.completion_tokens)
+                : 0;
+            costUsd =
+              typeof usage.cost === "number" && usage.cost >= 0 ? usage.cost : 0;
+            const reason = parsed.choices?.[0]?.finish_reason;
+            finishReason = typeof reason === "string" ? reason.slice(0, 64) : "unknown";
+          } catch {
+            // Non-JSON provider responses are still forwarded; metrics stay zero.
+          }
+
+          appendTrace(trace, {
+            type: "model_call_finished",
+            at: new Date().toISOString(),
+            stepIndex,
+            durationMs: Math.max(0, Date.now() - startedAt),
+            promptTokens,
+            completionTokens,
+            costUsd,
+            finishReason,
+          });
+
           response.writeHead(status, {
             "content-type": contentType,
             "cache-control": "no-store",
           });
-          response.end(Buffer.concat(responseChunks));
+          response.end(payload);
         });
 
         upstreamResponse.on("error", () => {
@@ -265,6 +368,10 @@ export async function startModelProxy(options: ModelProxyOptions): Promise<Model
   const maxRequestBytes = options.maxRequestBytes ?? PROXY_LIMITS.maxRequestBytes;
   const maxResponseBytes = options.maxResponseBytes ?? PROXY_LIMITS.maxResponseBytes;
   const upstreamTimeoutMs = options.upstreamTimeoutMs ?? PROXY_LIMITS.upstreamTimeoutMs;
+  const trace: ModelTrace = {
+    file: options.traceFile ?? null,
+    nextStep: 0,
+  };
   const server = createServer((request, response) => {
     handleRequest(
       request,
@@ -274,6 +381,7 @@ export async function startModelProxy(options: ModelProxyOptions): Promise<Model
       maxRequestBytes,
       maxResponseBytes,
       upstreamTimeoutMs,
+      trace,
     );
   });
 

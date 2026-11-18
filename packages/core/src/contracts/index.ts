@@ -9,3 +9,5 @@ export * from "./helpers.js";
 export * from "./project.js";
 export * from "./report.js";
 export * from "./requirement.js";
+export * from "./observability.js";
+export * from "./attribution.js";

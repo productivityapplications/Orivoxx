@@ -1,216 +1,160 @@
 # Orivoxx — Benchmark Frontend Specification
 
-**Version:** 1.0 · **Status:** source of truth for the benchmark UI · **Updated:** 15 November 2026
+**Version:** 2.0 · **Status:** source of truth for the attribution-era UI · **Updated:** 18 November 2026
 
-This document defines the public product surface. It replaces the verifier-era map-first workspace (`FRONTEND_DESIGN_SPEC.md`) as the current UI contract. The map-first document stays in the repository as visual history; the benchmark UI is **list-first**.
+Supersedes the list-first-only v1 contract. The visual language follows `docs/UI_REFERENCE_NOTES.md` (Coderia); page completeness follows `docs/LANDING_REFERENCE_NOTES.md` and `docs/APP_HOME_REFERENCE_NOTES.md`.
 
-## 1. Design intent
+## 1. Product split
 
-Orivoxx should read as a precise measurement instrument. The primary object is a **result**: a score, its three benches, the requirement outcomes behind it, and the versions that make it reproducible.
+| Surface | Route | Job |
+|---|---|---|
+| Marketing landing | `/` | Explain the problem, solution, measurement, and proof; drive to `/app` |
+| App home | `/app` | Orient a returning user and expose the next action |
+| Product surfaces | `/benchmarks`, `/submit`, `/results`, `/leaderboard`, `/compare`, `/docs`, `/privacy` | Do the work |
 
-- **List first, evidence second.** Requirements and their outcomes are rows. Selecting a row opens its rule, evidence, and source reference. There is no canvas requirement and no chat surface.
-- **Score first, explanation optional.** The scorecard is above the fold. A model explanation is a separate, explicit action and never changes a number.
-- **Show the machinery.** Versions, caps, tally, fingerprint, and the produced-code diff are visible. Nothing about the score is hidden.
-- **Calm density.** Thin borders, 4px spacing scale, no gradients, no decorative charts, no oversized marketing cards.
-- **Honest states.** `PASS`, `FAIL`, `DRIFT`, `UNVERIFIED`, `DEGRADED`, `ORGANIZER-RUN`, `SAMPLE` are labelled in text as well as color.
+The landing is **not** the app shell with a hero. The app is **not** a dashboard with five widgets and no narrative.
 
-## 2. Dark tokens
+## 2. Visual language
 
-Every screen and state uses these tokens. No light theme, no toggle. Components must not carry one-off hex values.
+Coderia-derived, dark-only, warm near-black.
 
 | Token | Value | Use |
 |---|---|---|
-| `--bg-app` | `#0B0D10` | Page background |
-| `--bg-panel` | `#101319` | Panels, tables |
-| `--bg-raised` | `#151922` | Hovered/selected rows |
-| `--bg-inset` | `#0D1117` | Code and diff blocks |
-| `--border-subtle` | `#232A35` | Dividers, card borders |
-| `--border-strong` | `#3A4351` | Focus, emphasized outline |
-| `--text-primary` | `#F2F4F8` | Primary text |
-| `--text-secondary` | `#B0B8C5` | Supporting text |
-| `--text-muted` | `#808A99` | Metadata only, never sole body copy |
-| `--accent` | `#A78BFA` | Primary action, active nav |
-| `--accent-secondary` | `#75A7FF` | Links, keyboard focus |
-| `--status-pass` | `#48C9A4` | Verified pass |
-| `--status-fail` | `#FF5D6C` | Confirmed failure |
-| `--status-drift` | `#FF7A86` | Specification drift |
-| `--status-unverified` | `#F3C66D` | Missing evidence |
-| `--status-neutral` | `#8792A2` | Not assessed, baseline |
-| `--status-accent` | `#9D8BFF` | In-progress, organizer-run |
-| `--radius-control` | `6px` | Buttons, inputs |
-| `--radius-panel` | `8px` | Panels, tables |
+| `--bg-app` | `#0B0B09` | Page background |
+| `--bg-panel` | `#111110` | Cards, tables |
+| `--bg-raised` | `#171715` | Hover, selected row |
+| `--bg-inset` | `#0E0E0C` | Code, terminal, trace |
+| `--border-subtle` | `#262622` | 1px card/divider |
+| `--border-strong` | `#3A3A34` | Focus, hover |
+| `--text-primary` | `#E1E1DB` | Primary text |
+| `--text-secondary` | `#B0B0A8` | Supporting text |
+| `--text-muted` | `#8C8C85` | Metadata |
+| `--accent` | `#17CF97` | Primary action, PASS, links |
+| `--accent-secondary` | `#75A7FF` | Informational links |
+| `--status-fail` | `#FF5C5C` | FAIL, critical |
+| `--status-drift` | `#FF8A7A` | DRIFT |
+| `--status-unverified` | `#F3C66D` | UNVERIFIED |
+| `--status-neutral` | `#8C8C85` | Not assessed |
 
-Type: system UI stack (`ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`); code `ui-monospace, "SFMono-Regular", Menlo, monospace`. Base 14px, metadata 12px, page title 28–32px, section title 15–16px semibold. Minimum body contrast 4.5:1; status colors are used for chips and bars, with a text label always present.
+Type: **Instrument Serif** 400 for display and section headings (`clamp(40px, 6vw, 64px)`, tracking −0.03em); **Geist** for body/UI (14–16px); **Geist Mono** for labels, ids, numbers. Mono eyebrow: 11px uppercase, 0.12em tracking, format `\ 01 \` / `\ SECTION \`.
 
-Motion: at most 120ms opacity/transform on hover and row selection. No spinners longer than 300ms without a label; no skeleton that mimics data.
+Rhythm: max width 1280px; section padding 90px desktop / 56px mobile; 4/8px base gaps; 1px borders; 12–16px panel radius; 999px primary buttons. No heavy shadows, no gradients except a static radial accent glow behind hero artifacts.
 
-## 3. Information architecture
+Motion: scroll reveal opacity + 12px translate over 500ms, once; hover border/background 150–250ms; artifact scale 0.98→1 over 600ms. No bounce, no infinite loops, no scroll-jacking. Respect reduced motion.
 
-| Route | Purpose | Data |
-|---|---|---|
-| `/` | Landing: what is measured, live top rows, task cards | leaderboard (limit 5), task registry |
-| `/benchmarks` | Task catalogue with versions and difficulty | task registry |
-| `/benchmarks/[taskId]` | Task detail: spec, requirements, starting files, adapters | task definition + task leaderboard |
-| `/submit` | Self-serve fake run: pick task + fixture variant | task registry |
-| `/results/[resultId]` | Scorecard, requirement list, evidence, diff | stored result |
-| `/leaderboard` | Ranked rows, task filter | result store |
-| `/compare` | Two results side by side on one task | two results + task |
-| `/privacy` | Data handling, retention, provider terms | static |
-| `/docs` | In-app documentation (P9) | static Markdown |
+Status vocabulary remains `PASS`, `FAIL`, `DRIFT`, `UNVERIFIED`, plus `CAPPED`, `SAMPLE`, `HARNESS`, `DEGRADED`, `REDACTED`. Text labels always accompany colour.
 
-Shared shell: top bar with `ORIVOXX` wordmark, nav (`Benchmarks`, `Leaderboard`, `Compare`, `Docs`), a `GitHub` link, and a right-side slot for the current task or result id. Max width 1200px, 24px gutters, sticky top bar with 1px bottom border.
+## 3. Page inventory
 
-## 4. Page contracts
+### 3.1 `/` — marketing landing
 
-### 4.1 Landing `/`
+Sections (all substantive, per `LANDING_REFERENCE_NOTES.md`):
 
-1. Eyebrow `BENCHMARK THE AGENT, NOT JUST THE MODEL`.
-2. H1: `A scorecard for AI software-engineering agents.`
-3. One-paragraph definition: versioned spec → sandboxed run → static deterministic score; every point traceable.
-4. Two CTAs: `Run the fake baseline` (primary, `/submit`) and `Explore results` (secondary, `/leaderboard`).
-5. Three compact facts: `3 benches`, `deterministic`, `no LLM in the score`.
-6. Live leaderboard preview: top 5 rows from the store; a `SAMPLE` chip when the rows are the bundled seed.
-7. Task cards: title, versions, difficulty, requirement count, link.
-8. Footer: `Deterministic scoring · Static analysis only · MIT`.
+1. Header: wordmark, Benchmarks, Leaderboard, Docs, GitHub, `Open app` pill.
+2. Hero: hackathon badge, H1 “Benchmark the agent, not just the model.”, two-sentence subtext, `View leaderboard` + `Read the docs`, four pills (Deterministic · Model-agnostic · Failure attribution · Reproducible), real result/attribution artifact, three assurance chips.
+3. `\ THE PROBLEM \ \ 01 \`: “A trace tells you what happened. It does not tell you why.” Five-layer hand-off diagram; three named pains; closing line.
+4. `\ THE SOLUTION \ \ 02 \`: three pillars (deterministic scoring, counterfactual attribution, reproducibility) + embedded attribution card.
+5. `\ HOW IT WORKS \ \ 03 \`: five numbered steps (Spec, Run, Score, Attribute, Replay), each with a real UI crop.
+6. `\ MEASUREMENT \ \ 04 \`: six metric cards + three chaos modes + pass@k; note that metrics are the substrate.
+7. `\ LEADERBOARD \ \ 05 \`: four real rows, score mean±std, pass@k, reliability stacked bar; `View full leaderboard →`.
+8. `\ ATTRIBUTION \ \ 06 \`: real result snippet, evidence + proof line (`47.3 → 89.1`), `View proof →`.
+9. `\ FOR DEVELOPERS \ \ 07 \`: terminal block with `orivoxx bench`, `orivoxx replay`, `orivoxx diff`; copy control.
+10. `\ RESOURCES \ \ 08 \`: docs, GitHub, build log.
+11. FAQ: 6 honest items.
+12. Closing CTA: “Benchmark the agent. Prove the failure.” + tagline.
+13. Footer.
 
-No hero illustration, stock photo, or fake product screenshot. Numbers come from the store.
+### 3.2 `/app` — app home
 
-### 4.2 Catalogue `/benchmarks`
+Per `docs/APP_HOME_REFERENCE_NOTES.md`:
 
-A table or list of task cards: id, title, summary, `taskVersion`, `rulesetVersion`, `scoringConfigVersion`, requirement count, time limit, network mode, difficulty. Each card links to `/benchmarks/[taskId]`. Above the list: one line explaining that tasks are versioned and immutable.
+1. Orientation header: eyebrow, H1, one paragraph, status stats (tasks, adapters, results, attributed runs, pass rate), four quick actions.
+2. Leaderboard snapshot: 4 rows with reliability bars; `View full leaderboard →`.
+3. Task catalogue snapshot: 3 cards with version, difficulty, requirement count, passThreshold, best score.
+4. Recent runs: last 5 rows with adapter, task, model, score, exit reason, attribution cell, timestamp.
+5. How attribution works: baseline → intervention at k → replay → PASS diagram; link to a real proof.
+6. Quick start / CLI: three commands + terminal output, copy.
+7. Chaos modes: three cards + `Run with chaos` actions + reliability definition.
+8. Footer.
 
-### 4.3 Task detail `/benchmarks/[taskId]`
+No heading-only sections. Real store data or explicit empty states.
 
-- Header: title, summary, version strip (`task`, `ruleset`, `scoring config`).
-- Requirement table: id, title, severity, bench, verification mode. Check details are shown on row expansion, including the declared path and rule type.
-- Starting files: bounded list with sizes; `PROJECT_SPEC.md` rendered as escaped text.
-- Adapters: the three adapters with kind and model; organizer-run adapters are labelled and not submit buttons.
-- Task leaderboard: top 5 rows for this task, linking to results.
-- Not found → the shared empty state with a link back to `/benchmarks`.
+### 3.3 `/benchmarks`
 
-### 4.4 Submit `/submit`
+Catalogue with id, title, version triple, difficulty, requirement count, passThreshold, best score. Cards link to detail. One paragraph on version immutability.
 
-A two-step, single-page form:
+### 3.4 `/benchmarks/[task]`
 
-1. Task select (cards, default `taskboard`).
-2. Fixture variant select: `compliant` or `regressed`, with a one-line explanation that this is the fake baseline and does not call a model.
+Header + version strip; requirement table (id, title, severity, bench, check); starting files; spec; adapters; task leaderboard; `Run baseline` and `Run with chaos` actions.
 
-Primary button `Run fake baseline`. On submit: inline progress with a labelled status (`running benchmark`), then redirect to `/results/[resultId]`. Errors render a fixed envelope message (`run_failed`, `invalid_input`, `store_unavailable`) and keep the form values.
+### 3.5 `/submit`
 
-Disclosure under the button: `No model call. The fake baseline materializes a checked-in fixture and scores it deterministically.` Real adapter runs are organizer-executed; there is no public field to submit an arbitrary command.
+Task select, adapter select (fake self-serve; organizer adapters labelled disabled), fixture variant or chaos mode, disclosure of what executes. Fake run is synchronous; organizer runs are documented. No arbitrary command field.
 
-### 4.5 Result `/results/[resultId]`
+### 3.6 `/results/[id]`
 
 Above the fold:
+- Breadcrumb, ids, adapter/model/run status, chaos chip, created time.
+- Artifact score + cap banner + three bench bars.
+- **Six-metric table**: steps, tool calls, tool error rate, tokens, cost, duration, plus exit reason and pass@k context.
+- Version strip.
 
-- Breadcrumb `Leaderboard / task / result`.
-- Task title, adapter label, model name or `No model (fake baseline)`, run status, duration, created time.
-- Score block: `overall` to one decimal, `/ 100`, plus the three bench bars (`spec 60%`, `security 25%`, `maintainability 15%`).
-- Cap banner when `capsApplied` is non-empty: every cap reason, the pre-cap score if known, and `critical spec cap 59.9` / `critical security cap 49.9` wording. Caps are never hidden.
-- Version strip: `taskVersion`, `rulesetVersion`, `scoringConfigVersion`, `adapterVersion`, `repositoryFingerprint` (monospace, copyable).
-- Tally chips: passed, failed, drifted, unverified.
+Middle:
+- **Attribution card**: layer × mode, evidence list with step indices, confidence, proof summary (`baseline → counterfactual`, intervention at step k), `View proof →`; or `unattributed` with reason.
+- Trace viewer: step-indexed timeline, collapsible groups, redacted chips, tool status, token/cost per model call; link to full trace.
+- Requirement list (expandable evidence) and produced-code diff.
 
-Below:
+Footer: reproducibility note.
 
-- **Requirement list** (primary): rows with status chip, id, title, severity, bench. Selecting a row expands inline evidence: rule id, matched text or missing evidence, source path, and line range when present. Keyboard: `Enter`/`Space` toggles, arrow keys move focus.
-- **Produced-code diff**: escaped `<pre>` text, unified diff, with a `truncated` notice when the budget cut it. No syntax highlighting required; no HTML rendering.
-- **Run output**: bounded stdout/stderr summaries when non-empty.
-- `UNVERIFIED` is counted separately from `FAIL` and both are shown in the tally.
-- Unknown result id → 404 page with `not_found` and a leaderboard link.
+### 3.7 `/results/[id]/trace`
 
-The result page never calls a model. An `Explain` action is out of scope for this build; if added later it must be an explicit, consented, separate call.
+Full-width timeline: sticky step rail, event cards, filters (model/tool/error/chaos), summary header with totals. Every content-bearing field is a summary, labelled `redacted`.
 
-### 4.6 Leaderboard `/leaderboard`
+### 3.8 `/replay/[id]`
 
-- Task filter (all tasks + each task id), result count, and a `SAMPLE` / `DEGRADED` chip with a one-line explanation.
-- Table columns: rank, score, task, adapter, model, spec, security, maint., caps, created. Rows link to results.
-- Default sort: score desc, then earlier `createdAt`, then `resultId`. The UI must not re-sort independently of the store.
-- Fake rows carry a `SAMPLE` or `BASELINE` chip; organizer-run harness rows carry `HARNESS`.
-- Empty store → empty state, not fake rows. Seed fallback rows are labelled.
-- Mobile: table becomes stacked rows with score first and adapter/task second.
+- Header: baseline vs counterfactual scores, pass/fail delta, intervention summary, passThreshold.
+- Side-by-side step lists with the divergence point highlighted; steps before k marked identical.
+- Proof metadata: replayed steps, deterministic scoring note.
+- “Run another intervention” select over stored candidates; if none, disabled with reason.
+- No live model call.
 
-### 4.7 Compare `/compare`
+### 3.9 `/leaderboard`
 
-- Two result selectors scoped to one task, defaulting to the top two distinct adapters on `taskboard`.
-- Header: task, versions, and the shared model slug when identical; a `same model` or `different model` chip.
-- Side-by-side score blocks, bench deltas (B − A, one decimal, signed), tally deltas, and a requirement matrix: one row per requirement id, status for A and B.
-- The comparison is read-only. No computed “winner” claim beyond the score difference.
-- Missing task or fewer than two results → empty state with a link to run the fake baseline.
+Columns: rank, adapter, task, model, artifact score mean±std, pass@k, steps, tool calls, tool error rate, tokens, cost, duration, reliability stacked bar (layer distribution), trend, chaos filter. Task/model/chaos filters; baselines toggle. Sorting total and stable.
 
-### 4.8 Privacy `/privacy`
+### 3.10 `/compare`
 
-Static dark page: what is stored (bounded scorecard, diff text), what is not (source, archives, prompts, keys), retention, shared-store location, provider terms, no analytics/cookies, contact placeholder. Content mirrors `docs/RESULTS_RETENTION.md` and `PRIVACY_NOTICE.md`.
+Two results: metric deltas, trace diff of first N steps with divergence, attribution diff (`python: harness × recovery × 3; aider: …`), scores. Read-only.
 
-## 5. Status vocabulary
+### 3.11 `/docs`, `/privacy`, `/404`
 
-| Token | Label | Meaning |
-|---|---|---|
-| `PASS` | Pass | Deterministic check satisfied |
-| `FAIL` | Fail | Deterministic check violated |
-| `DRIFT` | Drift | Declared structure no longer matches the ruleset |
-| `UNVERIFIED` | Unverified | No evidence available; earns 0 but is not a failure |
-| `DEGRADED` | Sample data | Store unavailable, bundled rows shown |
-| `SAMPLE` | Sample | Fake-baseline fixture row |
-| `HARNESS` | Organizer-run | Real adapter executed by the organizer |
-| `CAPPED` | Capped | A critical failure applied a score ceiling |
+Docs sidebar/breadcrumb/search with new Attribution, Replay & proof, Reliability, Metrics & traces, Resilience pages. Privacy updated for trace/action handling. 404 uses product shell.
 
-Color is never the only signal: every chip contains its label. Chips use a 1px border, 2px radius, 11–12px uppercase text with 0.04em tracking.
-
-## 6. States
+## 4. States
 
 | State | Surface | Rule |
 |---|---|---|
-| Loading | Route-level | Server components render data directly; client actions show a labelled inline status, no skeleton data |
-| Empty | Leaderboard, compare, task leaderboard | Explain what is missing and link to a next action |
-| Degraded | Leaderboard, result | `DEGRADED` chip plus one line naming the fallback; rows still readable |
-| Not found | Task, result | 404 message with the offending id and a link back |
-| Error | Submit | Fixed error envelope; no stack trace, no provider body |
-| Capped | Result | Banner above the score, cap reasons listed |
-| Truncated | Diff | `truncated` notice above the diff text |
-| Provider unavailable | Not applicable to public reads | No public read path requires a provider |
+| Empty | leaderboard, app home, compare | Explain missing data, link to a next action |
+| Degraded | leaderboard/result | `DEGRADED` chip + fallback store |
+| Unavailable | attribution/replay | `trace_unavailable` / `no_sufficient_intervention`; never guess |
+| Capped | result | Banner above score |
+| Redacted | trace | Chip on every summarized field |
+| Truncated | trace/diff | Notice with budget |
+| Error | submit | Fixed envelope with request id |
 
-## 7. Accessibility
+## 5. Accessibility and responsive
 
-- Every interactive element is reachable by `Tab`, with a visible `2px` `--accent-secondary` focus ring.
-- Requirement rows are buttons with `aria-expanded` and a labelled detail region.
-- Tables use real `<table>`, `<th scope="col">`, and a caption.
-- Status chips have text; contrast of chip text on chip background ≥ 4.5:1.
-- Score bars have `role="img"` and an `aria-label` with the numeric value.
-- Diff and code blocks are `<pre>` with escaped text and a `Copy` button that announces success.
-- Respect `prefers-reduced-motion`; no animation is required to understand a state.
-- Touch targets ≥ 40px on mobile.
+- Keyboard: all rows/cards focusable; trace steps toggle with Enter/Space; visible 2px accent focus.
+- Tables use real `<table>`, `<th scope>`, captions.
+- Status is text + colour; charts/bars have `aria-label` with numbers.
+- Diff/trace rendered as escaped text, never HTML.
+- ≥1024: two-column result; 768–1023: single column; <768: stacked cards, horizontal-scroll tables with sticky identifiers.
+- Touch targets ≥ 40px; reduced-motion respected.
 
-## 8. Responsive behavior
+## 6. Non-goals
 
-| Breakpoint | Behavior |
-|---|---|
-| ≥ 1024px | Two-column result layout: requirement list 2/3, evidence panel inline; nav inline |
-| 768–1023px | Single column; nav collapses to a wrapped row; tables allow horizontal scroll with a sticky first column |
-| < 768px | Stacked cards; leaderboard rows become score + task + adapter; code blocks scroll horizontally; nav in a disclosure |
-
-## 9. Component inventory
-
-| Component | File | Responsibility |
-|---|---|---|
-| `AppShell` | `apps/web/src/components/app-shell.tsx` | Top bar, nav, footer, skip link |
-| `StatusChip` | `apps/web/src/components/status-chip.tsx` | Fixed status vocabulary |
-| `ScoreBlock` | `apps/web/src/components/score-block.tsx` | Overall + three bench bars |
-| `CapBanner` | `apps/web/src/components/cap-banner.tsx` | Cap reasons and ceilings |
-| `VersionStrip` | `apps/web/src/components/version-strip.tsx` | Reproducibility fields |
-| `TallyChips` | `apps/web/src/components/tally-chips.tsx` | Pass/fail/drift/unverified counts |
-| `RequirementList` | `apps/web/src/components/requirement-list.tsx` | Keyboard-accessible outcome rows |
-| `DiffView` | `apps/web/src/components/diff-view.tsx` | Escaped diff text and truncation notice |
-| `LeaderboardTable` | `apps/web/src/components/leaderboard-table.tsx` | Ranked rows, chips, task filter |
-| `TaskCard` | `apps/web/src/components/task-card.tsx` | Catalogue entry |
-| `EmptyState` | `apps/web/src/components/empty-state.tsx` | Shared empty/not-found copy |
-| `SubmitForm` | `apps/web/src/components/submit-form.tsx` | Fake-run form and error states |
-| `ComparePanel` | `apps/web/src/components/compare-panel.tsx` | Side-by-side results and requirement matrix |
-| `CodeBlock` | `apps/web/src/components/code-block.tsx` | Escaped text, copy action |
-
-## 10. Non-goals
-
-- No chat interface, no conversational assistant, no “ask the model about this score”.
-- No dependency map on the benchmark result page. The map-first workspace is historical.
-- No model output in the score path, and no UI affordance that implies one.
-- No analytics, cookies, telemetry, or third-party embeds.
+- No chat interface.
+- No model-generated score or verdict.
+- No trace data that includes raw source, prompts, or secrets.
 - No light theme.
+- No pricing, careers, blog, or CMS pages without real content.

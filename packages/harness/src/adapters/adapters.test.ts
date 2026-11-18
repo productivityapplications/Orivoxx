@@ -47,6 +47,7 @@ describe("python-openrouter adapter", () => {
       MODEL_NAME: "openai/gpt-4o-mini",
       MAX_STEPS: "40",
       TASK_ID: "taskboard",
+      ORIVOXX_CHAOS: "none",
       PYTHONUNBUFFERED: "1",
     });
     expect(JSON.stringify(command)).not.toMatch(/sk-or-v1-/);

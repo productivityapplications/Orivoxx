@@ -1,5 +1,7 @@
 import { execFile as execFileCallback, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { chmod, mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { basename, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -152,6 +154,7 @@ async function startProxy(
   image: string,
   options: DockerExecutorOptions,
   dockerBin: string,
+  traceDirectory: string | null,
 ): Promise<void> {
   if (
     options.proxyBaseUrl === undefined ||
@@ -208,6 +211,9 @@ async function startProxy(
     "256m",
     "-v",
     `${scriptDir}:/app:ro`,
+    ...(traceDirectory === null
+      ? []
+      : ["-v", `${traceDirectory}:/trace:rw`, "-e", "MODEL_TRACE_FILE=/trace/proxy.jsonl"]),
     "-e",
     `MODEL_BASE_URL=${options.proxyBaseUrl}`,
     "-e",
@@ -414,6 +420,32 @@ async function spawnContainer(
   };
 }
 
+async function readProxyTrace(directory: string): Promise<unknown[]> {
+  let raw: string;
+
+  try {
+    raw = await readFile(join(directory, "proxy.jsonl"), "utf8");
+  } catch {
+    return [];
+  }
+
+  const events: unknown[] = [];
+
+  for (const line of raw.split("\n").slice(0, 500)) {
+    if (line.trim().length === 0) {
+      continue;
+    }
+
+    try {
+      events.push(JSON.parse(line));
+    } catch {
+      // A malformed trace line is dropped; it never fails the run.
+    }
+  }
+
+  return events;
+}
+
 export class DockerExecutor implements SandboxRunner {
   readonly id = "docker";
   readonly #options: DockerExecutorOptions;
@@ -444,10 +476,16 @@ export class DockerExecutor implements SandboxRunner {
     const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const containerName = `orivoxx-run-${runId}`;
     const proxyName = network === "model-proxy" ? `orivoxx-proxy-${runId}` : null;
+    const traceDirectory =
+      proxyName === null ? null : await mkdtemp(join(tmpdir(), "orivoxx-trace-"));
+
+    if (traceDirectory !== null) {
+      await chmod(traceDirectory, 0o777).catch(() => undefined);
+    }
 
     if (proxyName !== null) {
       try {
-        await startProxy(proxyName, image, this.#options, dockerBin);
+        await startProxy(proxyName, image, this.#options, dockerBin, traceDirectory);
       } catch (error) {
         await removeContainer(proxyName, dockerBin);
         throw error;
@@ -469,12 +507,16 @@ export class DockerExecutor implements SandboxRunner {
         Math.min(request.maxOutputBytes, SANDBOX_MAX_OUTPUT_BUFFER),
       );
 
+      const trace =
+        traceDirectory === null ? undefined : await readProxyTrace(traceDirectory);
+
       return {
         exitCode: result.exitCode,
         timedOut: result.timedOut,
         durationMs: result.durationMs,
         stdout: result.stdout,
         stderr: result.stderr,
+        ...(trace === undefined ? {} : { trace }),
       };
     } finally {
       if (proxyName !== null) {
@@ -482,6 +524,10 @@ export class DockerExecutor implements SandboxRunner {
       }
 
       await removeContainer(containerName, dockerBin);
+
+      if (traceDirectory !== null) {
+        await rm(traceDirectory, { recursive: true, force: true }).catch(() => undefined);
+      }
     }
   }
 }

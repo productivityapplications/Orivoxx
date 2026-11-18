@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { ProjectFileSchema, type ProjectFile } from "@orivoxx/core";
+import {
+  ChaosKindSchema,
+  ProjectFileSchema,
+  TraceEventSchema,
+  type ProjectFile,
+} from "@orivoxx/core";
 import { SemverSchema } from "@orivoxx/benchmarks";
 
 /**
@@ -32,6 +37,9 @@ export const ADAPTER_ENV_ALLOWLIST = [
   "AIDER_MODEL",
   "AIDER_OPENAI_API_BASE",
   "AIDER_OPENAI_API_KEY",
+  "ORIVOXX_CHAOS",
+  "ORIVOXX_TRACE_FILE",
+  "ORIVOXX_ACTION_FILE",
 ] as const;
 
 export type AdapterEnvName = (typeof ADAPTER_ENV_ALLOWLIST)[number];
@@ -88,6 +96,7 @@ export const AdapterRunInputSchema = z
     limits: AdapterLimitsSchema,
     network: z.enum(["none", "model-proxy"]),
     model: AdapterModelSchema.nullable(),
+    chaos: ChaosKindSchema.default("none"),
   })
   .strict();
 export type AdapterRunInput = z.infer<typeof AdapterRunInputSchema>;
@@ -208,6 +217,8 @@ export const AdapterRunOutputSchema = z
     durationMs: z.number().int().nonnegative(),
     stdoutSummary: z.string().max(HARNESS_LIMITS.maxSummaryChars),
     stderrSummary: z.string().max(HARNESS_LIMITS.maxSummaryChars),
+    trace: z.array(TraceEventSchema).max(500).optional(),
+    traceTruncated: z.boolean().optional(),
     warnings: z.array(z.string().max(500)).max(HARNESS_LIMITS.maxWarnings),
     repositoryFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     files: z.array(CapturedFileSchema).max(HARNESS_LIMITS.maxFiles),
@@ -248,12 +259,21 @@ export interface ExecutionRequest {
   maxOutputBytes: number;
 }
 
+export interface ReplayAction {
+  stepIndex: number;
+  toolName: string;
+  path: string;
+  content: string;
+}
+
 export interface ExecutionResult {
   exitCode: number | null;
   timedOut: boolean;
   durationMs: number;
   stdout: string;
   stderr: string;
+  /** Raw model-call trace events collected by the proxy sidecar. */
+  trace?: unknown[];
 }
 
 export interface AgentExecutor {

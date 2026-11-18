@@ -54,6 +54,7 @@ export function createPythonOpenRouterAdapter(
             MODEL_NAME: model.name,
             MAX_STEPS: String(input.limits.maxSteps),
             TASK_ID: input.task.id,
+            ORIVOXX_CHAOS: input.chaos,
             PYTHONUNBUFFERED: "1",
           },
         },

@@ -11,10 +11,12 @@ to the allowlisted model proxy, and never executes the code it writes.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -24,6 +26,10 @@ PROXY_URL = os.environ.get("MODEL_PROXY_URL", "http://model-proxy:8080/v1").rstr
 MODEL = os.environ.get("MODEL_NAME", "")
 MAX_STEPS = max(1, min(int(os.environ.get("MAX_STEPS", "10")), 24))
 SPEC_FILE = "PROJECT_SPEC.md"
+TRACE_FILE = Path(os.environ.get("ORIVOXX_TRACE_FILE", f"{WORKSPACE}/.orivoxx/trace.jsonl"))
+ACTION_FILE = Path(os.environ.get("ORIVOXX_ACTION_FILE", f"{WORKSPACE}/.orivoxx/actions.jsonl"))
+CHAOS = os.environ.get("ORIVOXX_CHAOS", "none")
+MAX_ACTION_BYTES = 2 * 1024 * 1024
 
 MAX_FILES = 10
 MAX_FILE_BYTES = 64 * 1024
@@ -31,6 +37,7 @@ MAX_TOTAL_BYTES = 256 * 1024
 MAX_CONTEXT_BYTES = 64 * 1024
 MAX_CONTEXT_FILES = 30
 REQUEST_TIMEOUT_SECONDS = 180
+CHAOS_LATENCY_SECONDS = 2.5
 
 ALLOWED_SUFFIXES = (
     ".ts",
@@ -81,9 +88,58 @@ def log(message: str) -> None:
     print(message, flush=True)
 
 
-def chat(messages: list[dict[str, str]], max_tokens: int) -> str:
+def now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()) + ".000Z"
+
+
+def emit(event: dict) -> None:
+    try:
+        TRACE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with TRACE_FILE.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(event, separators=(",", ":")) + "\n")
+    except OSError:
+        # Tracing must never take down the agent.
+        pass
+
+
+def record_action(event: dict) -> None:
+    try:
+        ACTION_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with ACTION_FILE.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(event, separators=(",", ":")) + "\n")
+    except OSError:
+        pass
+
+
+def chaos_event() -> None:
+    if CHAOS != "none":
+        emit(
+            {
+                "type": "chaos_injected",
+                "at": now(),
+                "kind": CHAOS,
+                "payloadSummary": {
+                    "tool_error": "one write_file fails with EACCES",
+                    "latency": f"{CHAOS_LATENCY_SECONDS}s delay per model call",
+                    "context_pressure": "context truncated; two write steps allowed",
+                }.get(CHAOS, CHAOS),
+            }
+        )
+
+
+def action_bytes() -> int:
+    try:
+        return ACTION_FILE.stat().st_size
+    except OSError:
+        return 0
+
+
+def chat(messages: list[dict[str, str]], max_tokens: int, step_index: int) -> str:
     if not MODEL:
         raise AgentError("MODEL_NAME is not set")
+
+    if CHAOS == "latency":
+        time.sleep(CHAOS_LATENCY_SECONDS)
 
     payload = json.dumps(
         {
@@ -101,6 +157,7 @@ def chat(messages: list[dict[str, str]], max_tokens: int) -> str:
         headers={
             "content-type": "application/json",
             "authorization": "Bearer orivoxx-sandbox-proxy",
+            "x-orivoxx-step": str(step_index),
         },
     )
 
@@ -207,7 +264,15 @@ def safe_path(raw: str) -> str | None:
     return value
 
 
-def write_file(relative: str, content: str, written: dict[str, int], budget: list[int]) -> None:
+def write_file(
+    relative: str,
+    content: str,
+    written: dict[str, int],
+    budget: list[int],
+    step_index: int,
+    chaos_target: str | None,
+    state: dict,
+) -> None:
     payload = content.rstrip("\n") + "\n"
     size = len(payload.encode("utf-8"))
 
@@ -225,10 +290,85 @@ def write_file(relative: str, content: str, written: dict[str, int], budget: lis
         log(f"skip {relative}: path escapes the workspace")
         return
 
+    emit(
+        {
+            "type": "tool_call_started",
+            "at": now(),
+            "stepIndex": step_index,
+            "toolName": "write_file",
+            "argsRedacted": f"path={relative} bytes={size}",
+            "redacted": True,
+        }
+    )
+    started = time.time()
+    record_action(
+        {
+            "stepIndex": step_index,
+            "toolName": "write_file",
+            "path": relative,
+            "content": payload,
+        }
+    )
+
+    if (
+        CHAOS == "tool_error"
+        and not state["chaos_failed"]
+        and chaos_target is not None
+        and relative == chaos_target
+    ):
+        state["chaos_failed"] = True
+        duration = int((time.time() - started) * 1000)
+        emit(
+            {
+                "type": "tool_call_finished",
+                "at": now(),
+                "stepIndex": step_index,
+                "toolName": "write_file",
+                "durationMs": duration,
+                "status": "error",
+                "resultRedacted": "EACCES: permission denied (injected)",
+                "argsRedacted": f"path={relative} bytes={size}",
+                "errorClass": "EACCES",
+                "redacted": True,
+            }
+        )
+        emit(
+            {
+                "type": "step_completed",
+                "at": now(),
+                "stepIndex": step_index,
+                "durationMs": duration,
+            }
+        )
+        log(f"injected tool error on {relative}")
+        return
+
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(payload, encoding="utf-8")
     written[relative] = size
     budget[0] += size
+    duration = int((time.time() - started) * 1000)
+    emit(
+        {
+            "type": "tool_call_finished",
+            "at": now(),
+            "stepIndex": step_index,
+            "toolName": "write_file",
+            "durationMs": duration,
+            "status": "ok",
+            "resultRedacted": f"ok bytes={size}",
+            "errorClass": None,
+            "redacted": True,
+        }
+    )
+    emit(
+        {
+            "type": "step_completed",
+            "at": now(),
+            "stepIndex": step_index,
+            "durationMs": duration,
+        }
+    )
     log(f"wrote {relative} ({size} bytes)")
 
 
@@ -277,7 +417,12 @@ def main() -> int:
     if not MODEL:
         raise AgentError("MODEL_NAME is not set")
 
+    chaos_event()
     context = read_starting_context()
+
+    if CHAOS == "context_pressure":
+        context = context[:4_000]
+
     plan_messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
@@ -294,16 +439,24 @@ def main() -> int:
         },
     ]
 
-    plan = parse_plan(chat(plan_messages, max_tokens=512))
+    plan = parse_plan(chat(plan_messages, max_tokens=512, step_index=1))
     log(f"plan: {len(plan)} files")
 
     written: dict[str, int] = {}
     budget = [0]
+    state = {"chaos_failed": False}
+    effective_max_steps = min(MAX_STEPS, 2) if CHAOS == "context_pressure" else MAX_STEPS
+    chaos_target = next(
+        (path for path in plan if "projects" in path and path.endswith("route.ts")),
+        plan[-1] if plan else None,
+    )
 
     for index, relative in enumerate(plan):
-        if index >= MAX_STEPS:
+        if index >= effective_max_steps:
             log("stopped at MAX_STEPS")
             break
+
+        step_index = index + 2
 
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -317,8 +470,15 @@ def main() -> int:
                 ),
             },
         ]
-        content = strip_fence(chat(messages, max_tokens=4096))
-        write_file(relative, content, written, budget)
+        content = strip_fence(chat(messages, max_tokens=4096, step_index=step_index))
+
+        if action_bytes() > MAX_ACTION_BYTES:
+            raise AgentError("the replay action log exceeded its budget")
+
+        write_file(relative, content, written, budget, step_index, chaos_target, state)
+
+    if state["chaos_failed"]:
+        raise AgentError("write_file failed: EACCES")
 
     if not written:
         raise AgentError("the agent wrote no files")

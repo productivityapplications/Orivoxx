@@ -56,6 +56,7 @@ export function createAiderOpenRouterAdapter(
             TASK_ID: input.task.id,
             OPENAI_API_KEY: "orivoxx-sandbox-proxy",
             AIDER_OPENAI_API_KEY: "orivoxx-sandbox-proxy",
+            ORIVOXX_CHAOS: input.chaos,
             PYTHONUNBUFFERED: "1",
           },
         },

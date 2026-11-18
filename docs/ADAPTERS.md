@@ -81,6 +81,10 @@ Model configuration is environment-driven and recorded per run:
 
 No model slug is a product invariant. Every row records `adapter.id`, `adapter.version`, `model.provider`, `model.name`, and `model.baseUrl`.
 
+## 5b. Traces and chaos
+
+Adapters emit tool and step events to `ORIVOXX_TRACE_FILE` inside the workspace; the proxy independently records model-call timing, tokens, and cost. Both are merged into the result trace. `python-openrouter` supports `ORIVOXX_CHAOS=tool_error|latency|context_pressure`; the other adapters accept the variable but do not inject faults. A chaos run is labelled in the result and used as ground truth for attribution validation.
+
 ## 6. Running an adapter
 
 ```bash

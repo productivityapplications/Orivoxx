@@ -1,0 +1,31 @@
+{
+  "name": "@orivoxx/replay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "files": ["dist"],
+  "engines": { "node": ">=24.22.1" },
+  "scripts": {
+    "prebuild": "pnpm --filter @orivoxx/core build && pnpm --filter @orivoxx/benchmarks build && pnpm --filter @orivoxx/results build",
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@orivoxx/benchmarks": "workspace:*",
+    "@orivoxx/core": "workspace:*",
+    "@orivoxx/results": "workspace:*",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "eslint": "^9.39.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}

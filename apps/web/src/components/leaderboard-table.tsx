@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import type { ReliabilityProfile } from "@orivoxx/core";
+
 import {
   adapterKindLabel,
   adapterKindTone,
@@ -22,14 +24,43 @@ export interface LeaderboardRow {
   model: { name: string } | null;
 }
 
+const LAYER_COLORS: Record<string, string> = {
+  spec: "bg-progress",
+  model: "bg-accent-secondary",
+  harness: "bg-fail",
+  tool: "bg-unverified",
+  environment: "bg-neutral",
+};
+
+function Reliability({ profile }: { profile: ReliabilityProfile }) {
+  const total = Object.values(profile.layerDistribution).reduce((sum, value) => sum + value, 0);
+  const layers = Object.entries(profile.layerDistribution).filter(([, value]) => value > 0);
+
+  return (
+    <div className="space-y-1">
+      <div className="flex h-1.5 w-24 overflow-hidden rounded-full bg-raised" aria-hidden="true">
+        {total === 0 ? <span className="h-full w-full bg-border-strong" /> : null}
+        {layers.map(([layer, value]) => (
+          <span key={layer} className={`h-full ${LAYER_COLORS[layer] ?? "bg-neutral"}`} style={{ width: `${(value / total) * 100}%` }} />
+        ))}
+      </div>
+      <p className="font-mono text-[9px] text-muted">
+        {profile.runs} runs · {Math.round(profile.passAtK * 100)}% pass
+      </p>
+    </div>
+  );
+}
+
 export function LeaderboardTable({
   rows,
   caption,
   showTask = true,
+  reliability,
 }: {
   rows: LeaderboardRow[];
   caption: string;
   showTask?: boolean;
+  reliability?: Map<string, ReliabilityProfile>;
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border-subtle">
@@ -63,6 +94,12 @@ export function LeaderboardTable({
             <th scope="col" className="px-3 py-2 text-right font-medium">
               Maint
             </th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">
+              Pass@k
+            </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              Reliability
+            </th>
             <th scope="col" className="px-3 py-2 font-medium">
               Flags
             </th>
@@ -72,7 +109,10 @@ export function LeaderboardTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-border-subtle bg-panel/60">
-          {rows.map((row, index) => (
+          {rows.map((row, index) => {
+            const profile = reliability?.get(`${row.adapter.id}:${row.taskId}`);
+
+            return (
             <tr key={row.resultId} className="transition-colors hover:bg-raised">
               <td className="px-3 py-2.5 font-mono text-xs text-muted">{index + 1}</td>
               <td className="px-3 py-2.5">
@@ -83,6 +123,11 @@ export function LeaderboardTable({
                 >
                   {formatScore(row.overall)}
                 </Link>
+                {profile !== undefined && profile.runs > 1 ? (
+                  <span className="mt-0.5 block font-mono text-[9px] text-muted">
+                    μ {formatScore(profile.artifactScoreMean)} · σ {formatScore(profile.artifactScoreStd)}
+                  </span>
+                ) : null}
               </td>
               {showTask ? (
                 <td className="px-3 py-2.5">
@@ -111,6 +156,12 @@ export function LeaderboardTable({
               <td className="px-3 py-2.5 text-right font-mono text-xs text-secondary">
                 {formatScore(row.benches.maintainability)}
               </td>
+              <td className="px-3 py-2.5 text-right font-mono text-xs text-secondary">
+                {profile === undefined ? "—" : `${Math.round(profile.passAtK * 100)}%`}
+              </td>
+              <td className="px-3 py-2.5">
+                {profile === undefined ? <span className="text-xs text-muted">—</span> : <Reliability profile={profile} />}
+              </td>
               <td className="px-3 py-2.5">
                 {row.capsApplied.length > 0 ? (
                   <span title={row.capsApplied.map(capLabel).join("; ")}>
@@ -124,7 +175,8 @@ export function LeaderboardTable({
                 <span title={row.createdAt}>{formatDateTime(row.createdAt)}</span>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       <p className="border-t border-border-subtle px-3 py-2 font-mono text-[11px] text-muted">

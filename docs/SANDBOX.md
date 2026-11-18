@@ -117,6 +117,10 @@ The container filesystem itself is still read-only with a bounded tmpfs `/tmp`, 
 
 Container names are `orivoxx-run-<timestamp>-<rand>` and `orivoxx-proxy-<timestamp>-<rand>`. The integration suite asserts that no `orivoxx-run-*` or `orivoxx-proxy-*` container survives a run.
 
+## 6b. Trace collection
+
+The proxy sidecar writes model-call events to a host-mounted `/trace` directory (`MODEL_TRACE_FILE`). The agent writes tool/step events to `/workspace/.orivoxx/trace.jsonl`; the harness reads both after exit, validates them, merges by step, and deletes the workspace trace before capture. The proxy trace directory is removed after the run. Replay actions are held in harness memory only and are never persisted.
+
 ## 7. What the sandbox does not do
 
 - It does not install dependencies from the network. An adapter that needs packages must have them in the image, which is versioned.

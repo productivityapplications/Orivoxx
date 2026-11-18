@@ -26,8 +26,10 @@
     "sandbox:build": "pnpm build && node scripts/build-sandbox.mjs"
   },
   "dependencies": {
+    "@orivoxx/attribution": "workspace:*",
     "@orivoxx/benchmarks": "workspace:*",
     "@orivoxx/core": "workspace:*",
+    "@orivoxx/replay": "workspace:*",
     "@orivoxx/results": "workspace:*",
     "zod": "^4.1.12"
   },
