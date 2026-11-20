@@ -259,7 +259,7 @@ export default async function LandingPage() {
               <div className="mt-4 space-y-2 font-mono text-[11px] leading-5 text-secondary">
                 <p><span className="text-muted">evidence</span> step 2, write_file → EACCES, no retry</p>
                 <p><span className="text-muted">proof</span> replay with retry policy → PASS</p>
-                <p><span className="text-muted">delta</span> 49.7 → 98.3</p>
+                <p><span className="text-muted">delta</span> 0.0 → 100.0</p>
                 <p><span className="text-muted">scope</span> intervention at 2, replay 3–7, static scoring</p>
               </div>
               <div className="mt-4 h-px bg-border-subtle" />
@@ -301,9 +301,9 @@ export default async function LandingPage() {
                 <div className="mt-4 rounded border border-border-subtle bg-inset px-2 py-1.5 font-mono text-[9px] text-muted">
                   {index === "01" && "task 1.0.0 · ruleset 1.0.0"}
                   {index === "02" && "trace 54 events · 7 tools"}
-                  {index === "03" && "score 49.7 · capped"}
+                  {index === "03" && "score 0.0 · test failed"}
                   {index === "04" && "harness × recovery"}
-                  {index === "05" && "49.7 → 98.3 · PASS"}
+                  {index === "05" && "0.0 → 100.0 · PASS"}
                 </div>
               </div>
             ))}
@@ -486,7 +486,7 @@ export default async function LandingPage() {
               <StatusChip tone="pass">Sufficient</StatusChip>
             </div>
             <p className="mt-4 font-mono text-2xl text-primary">
-              {proof == null ? "49.7 → 98.3" : `${proof.baseline.overall.toFixed(1)} → ${proof.counterfactual.overall.toFixed(1)}`}
+              {proof == null ? "0.0 → 100.0" : `${proof.baseline.overall.toFixed(1)} → ${proof.counterfactual.overall.toFixed(1)}`}
             </p>
             <div className="mt-5 space-y-2">
               {["baseline trace", "intervention at step " + (proof?.intervention.stepIndex ?? 2), "replay remaining steps", "deterministic score"].map((step, index) => (
@@ -525,11 +525,11 @@ export default async function LandingPage() {
           </div>
           <div className="rounded-xl border border-border-subtle bg-inset p-4 font-mono text-[11px] leading-6 text-secondary">
             <p><span className="text-accent">$</span> orivoxx bench --task taskboard --chaos tool_error</p>
-            <p className="text-muted">run 49.7 · harness × recovery · proof 98.3</p>
+            <p className="text-muted">run 0.0 · harness × recovery · proof 100.0</p>
             <p className="mt-3"><span className="text-accent">$</span> orivoxx replay --result res_64068a</p>
             <p className="text-muted">intervention retry_policy@2 · replayed 6 · PASS</p>
             <p className="mt-3"><span className="text-accent">$</span> orivoxx diff --a res_64068a --b res_df4fc5</p>
-            <p className="text-muted">score +48.6 · tool errors -20% · tokens +6.8k</p>
+            <p className="text-muted">score +100.0 · real test passes · no model in score</p>
           </div>
         </div>
       </section>

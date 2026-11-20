@@ -262,11 +262,11 @@ export default async function AppHomePage() {
         </div>
         <div className="rounded-xl border border-border-subtle bg-inset p-4 font-mono text-[11px] leading-6 text-secondary">
           <p><span className="text-accent">$</span> orivoxx bench --task itsdangerous-future-signature --chaos failing_tools</p>
-          <p className="text-muted">49.7 · harness × recovery · 6 tool calls</p>
+          <p className="text-muted">0.0 · harness × recovery · 3 replayed steps</p>
           <p className="mt-3"><span className="text-accent">$</span> orivoxx replay --result res_c1ba8d7</p>
-          <p className="text-muted">retry_policy@2 → 98.3 · PASS</p>
+          <p className="text-muted">retry_policy@2 → 100.0 · PASS</p>
           <p className="mt-3"><span className="text-accent">$</span> orivoxx diff --a res_c1ba8d7 --b res_85394c</p>
-          <p className="text-muted">+48.6 score · -20% tool errors</p>
+          <p className="text-muted">+100.0 score · real test passes</p>
         </div>
       </section>
 
