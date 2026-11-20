@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  CURATED_REAL_TASKS,
   getTask,
   listTasks,
   type TaskDifficulty,
@@ -9,6 +10,10 @@ import {
 
 export interface TaskSummaryView {
   id: string;
+  kind: "synthetic" | "real";
+  language?: "python" | "node";
+  license?: string;
+  repoUrl?: string;
   version: string;
   title: string;
   summary: string;
@@ -70,18 +75,22 @@ function requirementView(requirement: TaskRequirement): TaskRequirementView {
   };
 }
 
-function displayOrder(task: { id: string; pinned: boolean }): number {
-  if (task.pinned) {
+function displayOrder(task: { id: string; pinned: boolean; kind: "synthetic" | "real" }): number {
+  if (task.kind === "real") {
     return 0;
   }
 
-  return task.id === "taskboard" ? 1 : 2;
+  if (task.pinned) {
+    return 1;
+  }
+
+  return task.id === "taskboard" ? 2 : 3;
 }
 
 export function taskSummaries(): TaskSummaryView[] {
-  return listTasks()
-    .map((task) => ({
+  const synthetic = listTasks().map((task) => ({
     id: task.id,
+    kind: "synthetic" as const,
     version: task.version,
     title: task.title,
     summary: task.summary,
@@ -94,8 +103,36 @@ export function taskSummaries(): TaskSummaryView[] {
       timeLimitSeconds: task.timeLimitSeconds,
       pinned: task.pinned,
       passThreshold: 70,
-    }))
-    .sort((left, right) => displayOrder(left) - displayOrder(right) || left.id.localeCompare(right.id));
+  }));
+
+  const real = CURATED_REAL_TASKS.map((task) => ({
+    id: task.id,
+    kind: "real" as const,
+    language: task.language,
+    license: task.license,
+    repoUrl: task.repoUrl,
+    version: task.version,
+    title: task.title,
+    summary: task.summary,
+    difficulty:
+      task.difficulty === "easy"
+        ? ("starter" as const)
+        : task.difficulty === "medium"
+          ? ("intermediate" as const)
+          : ("advanced" as const),
+    tags: [task.language, task.license, task.source],
+    rulesetVersion: "1.0.0",
+    scoringConfigVersion: "1.0.0",
+    requirementCount: 1,
+    benchCounts: { spec: 1, security: 3 },
+    timeLimitSeconds: 900,
+    pinned: false,
+    passThreshold: 70,
+  }));
+
+  return [...real, ...synthetic].sort(
+    (left, right) => displayOrder(left) - displayOrder(right) || left.id.localeCompare(right.id),
+  );
 }
 
 export function taskDetail(taskId: string): TaskDetailView | null {
@@ -115,6 +152,7 @@ export function taskDetail(taskId: string): TaskDetailView | null {
 
   const detail: TaskDetailView = {
     id: task.manifest.id,
+    kind: "synthetic",
     version: task.manifest.version,
     title: task.manifest.title,
     summary: task.manifest.summary,

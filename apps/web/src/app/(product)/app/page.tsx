@@ -158,7 +158,7 @@ export default async function AppHomePage() {
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {tasks.slice(0, 3).map((task) => (
-            <Link key={task.id} href={`/benchmarks/${task.id}`} className="rounded-xl border border-border-subtle bg-panel p-4 transition-colors hover:border-border-strong">
+            <Link key={task.id} href={task.kind === "real" ? `/tasks/${task.id}` : `/benchmarks/${task.id}`} className="rounded-xl border border-border-subtle bg-panel p-4 transition-colors hover:border-border-strong">
               <div className="flex items-center justify-between">
                 <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">{task.id} · v{task.version}</p>
                 <StatusChip tone="neutral">{task.difficulty}</StatusChip>

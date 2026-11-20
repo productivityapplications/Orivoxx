@@ -176,8 +176,16 @@ describe("task routes", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.tasks.length).toBeGreaterThanOrEqual(2);
+    expect(body.tasks.length).toBeGreaterThanOrEqual(5);
+    expect(body.tasks.map((task: { id: string }) => task.id)).toEqual(
+      expect.arrayContaining([
+        "slugify-max-length",
+        "is-email-predicate",
+        "itsdangerous-future-signature",
+      ]),
+    );
     expect(body.tasks[0]).toMatchObject({
+      kind: "real",
       id: expect.any(String),
       version: expect.any(String),
       rulesetVersion: expect.any(String),
@@ -202,5 +210,19 @@ describe("task routes", () => {
 
     expect(missing.status).toBe(404);
     expect(await missing.json()).toMatchObject({ error: { code: "not_found" } });
+  });
+
+  it("returns a curated real task detail", async () => {
+    const detail = await taskRoute(
+      new Request("http://localhost/api/v1/tasks/slugify-max-length"),
+      { params: Promise.resolve({ taskId: "slugify-max-length" }) },
+    );
+
+    expect(detail.status).toBe(200);
+    const body = await detail.json();
+    expect(body.task.source).toBe("handpicked");
+    expect(body.task.visibility).toBe("curated");
+    expect(body.task.repoUrl).toBe("https://github.com/sindresorhus/slugify");
+    expect(body.task.testCommand).toContain(".orivoxx/acceptance.test.mjs");
   });
 });

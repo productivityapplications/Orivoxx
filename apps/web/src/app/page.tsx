@@ -42,9 +42,12 @@ export default async function LandingPage() {
   ]);
   const reliability = groupReliability(board.entries);
   const topRows = board.entries.slice(0, 4);
-  const attributed = board.entries.find((entry) => entry.attribution?.proof != null);
+  const attributed =
+    board.entries.find((entry) => entry.realTask !== undefined && entry.attribution?.proof != null) ??
+    board.entries.find((entry) => entry.attribution?.proof != null);
   const proof = attributed?.attribution?.proof;
-  const sampleTask = tasks[0];
+  const realTasks = tasks.filter((task) => task.kind === "real");
+  const sampleTask = realTasks[0] ?? tasks[0];
 
   return (
     <MarketingShell>
@@ -100,7 +103,7 @@ export default async function LandingPage() {
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
               <span>No LLM in the score</span>
               <span>Sandboxed execution</span>
-              <span>Every failure has a proof</span>
+              <span>Attributed tool failures carry proof</span>
             </div>
           </div>
 
@@ -352,6 +355,42 @@ export default async function LandingPage() {
                 <p className="font-mono text-[11px] text-accent">{kind}</p>
                 <p className="mt-2 text-xs leading-5 text-secondary">{body}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Real tasks */}
+      <section className="border-b border-border-subtle">
+        <div className="mx-auto w-full max-w-[1280px] px-5 py-16 sm:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+                \ REAL REPOSITORY TASKS \
+              </p>
+              <h2 className="mt-2 font-display text-[clamp(2rem,3.5vw,3rem)] leading-[1.05] tracking-[-0.03em]">
+                A base commit, an issue, a real test.
+              </h2>
+            </div>
+            <Link href="/tasks" className="text-xs text-accent-secondary hover:underline">
+              Browse the task catalogue →
+            </Link>
+          </div>
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            {realTasks.slice(0, 3).map((task) => (
+              <Link
+                key={task.id}
+                href={`/tasks/${task.id}`}
+                className="rounded-xl border border-border-subtle bg-panel p-4 transition-colors hover:border-border-strong"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-[10px] text-muted">{task.language} · {task.license}</span>
+                  <StatusChip tone="pass">public</StatusChip>
+                </div>
+                <p className="mt-2 font-mono text-[11px] text-accent">{task.id}</p>
+                <p className="mt-1 text-sm text-primary">{task.title}</p>
+                <p className="mt-2 line-clamp-2 text-xs leading-5 text-secondary">{task.summary}</p>
+              </Link>
             ))}
           </div>
         </div>
