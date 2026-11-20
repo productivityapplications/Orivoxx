@@ -611,3 +611,42 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - GitHub OAuth login was not completed end-to-end (no GitHub account credentials); redirect, state, signed session, anonymous fallback, curator promotion, and private 403 were exercised.
 - Copilot remains excluded (org policy), Cursor excluded (no reliable headless OpenRouter route).
 - The existing chaos-proof diff includes pytest cache files created before capture; future runs exclude those directories.
+
+## 2026-11-20 — Final verification and video status
+
+**Video**
+
+- ElevenLabs 1-scene smoke test returned **HTTP 401** with `missing_permissions` (`text_to_speech`). Per the Phase 5 stop rule, the video was not re-recorded. The existing `demo/orivoxx-demo.mp4` (2:21) is the pre-final cut; the final script and recording are blocked on a valid ElevenLabs key with TTS permission.
+- No `demo/` files were modified in this pass.
+
+**Next.js and deployment**
+
+- Next.js 16.4.2 → 16.4.6 (`next`, `eslint-config-next`, `@next/env`). Build passes with and without `AI_AGENT`/`AGENT`/`OPENCODE`/`OPENCODE_SESSION_ID`.
+- Deployed `d77079c` to `https://orivoxx.vercel.app`; `/`, `/app`, `/tasks`, `/tasks/new`, `/tasks/mine`, all three curated task pages, the community task page, both result pages, the replay page, `/leaderboard`, `/api/v1/health` → 200; `/api/auth/github` → 307.
+- Private task `/api/v1/tasks/is-decimal-263f95c1` → 403 for a fresh anonymous cookie.
+
+**Fresh clone quickstart**
+
+- `git clone --depth 1` + `pnpm install --frozen-lockfile` + `pnpm -r build` + `pnpm -r typecheck` + `pnpm --filter web build` all pass. The `pnpm -r build` step is required because the web app consumes workspace `dist` output; README updated.
+
+**Final data**
+
+- Fresh-user E2E: task `is-decimal-800937e9`, result `res_2ea69a6f1de543c481d945793129d3bf`, `python-openrouter` + `openai/gpt-5.1`, 100.0, $0.0068.
+- Claude Code pass: `res_85394cc5a29a4c89b0f7613e229ebd99`, `slugify-max-length`, 100.0, $0.9044.
+- Chaos proof: `res_c1ba8d7b435e4ae6b514138458fab8b7`, `python (chaos: failing_tools)`, 0.0 → 100.0, `harness × recovery`.
+- Codex real failure: `res_e2767b1f393b4adb8a0d74cdeeb0afca`, `is-email-predicate`, 0.0, `model × decision`, no proof.
+- Removed 402/credit-exhausted runs and debug-only failures from the public store; they are not reported as model results.
+
+**Tests**
+
+- 494 unit tests: core 223, benchmarks 71, results 57, attribution 5, replay 5, harness 88, web 45.
+- 100 harness tests with Docker (`ORIVOXX_DOCKER_TESTS=1`), including 12 integration tests.
+- 5 Playwright E2E flows pass.
+- Deterministic scoring import graph: 4/4 pass, including “contains no provider, adapter, or network module.”
+- `pnpm -r typecheck` and `pnpm -r lint` pass with no warnings.
+
+**Open items**
+
+- Final video blocked by ElevenLabs 401.
+- GitHub OAuth end-to-end login still not exercised (no GitHub account credentials).
+- Copilot/Cursor remain excluded.
