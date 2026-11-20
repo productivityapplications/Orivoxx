@@ -27,7 +27,7 @@ A trace shows what happened, not why. Orivoxx runs brand-name agents on real rep
 
 | Agent | OpenRouter route | Status |
 |---|---|---|
-| Claude Code 2.1.329 | Anthropic-compatible endpoint through the proxy | Runs; passed `slugify-max-length` |
+| Claude Code 2.1.329 | Anthropic-compatible endpoint through the proxy | Runs; passed `slugify-max-length` and the fresh community `is-decimal-800937e9` |
 | OpenAI Codex CLI 0.171.0 | Responses wire API through the proxy | Runs; passed legacy tasks; failed `is-email-predicate` |
 | Aider 0.86.2 | OpenAI-compatible proxy | Runs as the baseline |
 | GitHub Copilot CLI | no OpenRouter base-url override; org policy denied | Excluded |

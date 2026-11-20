@@ -80,7 +80,7 @@ const adapterId = options.adapter ?? "claude-code-openrouter";
 const modelName = options.model;
 const adapter =
   adapterId === "claude-code-openrouter" || adapterId === "codex-openrouter"
-    ? createBrandAdapter(adapterId)
+    ? createBrandAdapter(adapterId, { modelName } )
     : adapterId === "aider-openrouter"
       ? createAiderOpenRouterAdapter({ modelName: modelName ?? "anthropic/claude-sonnet-4.5" })
       : adapterId === "python-openrouter"

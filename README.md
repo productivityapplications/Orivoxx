@@ -59,7 +59,8 @@ Recorded runs:
 
 | Agent | Task | Test | Duration | Cost | Result |
 |---|---|---|---:|---:|---|
-| Claude Code | `slugify-max-length` | PASS | 232.7s | $0.9044 | [`res_85394cc5…`](https://orivoxx.vercel.app/results/res_85394cc5a29a4c89b0f7613e229ebd99) |
+| Claude Code (`anthropic/claude-sonnet-4.5`) | `slugify-max-length` | PASS | 232.7s | $0.9044 | [`res_85394cc5…`](https://orivoxx.vercel.app/results/res_85394cc5a29a4c89b0f7613e229ebd99) |
+| Claude Code (`anthropic/claude-haiku-5.5`) | community `is-decimal-800937e9` | PASS | 11.8s | $0.0015 | [`res_74101d58…`](https://orivoxx.vercel.app/results/res_74101d582b994a66bc67936f79865502) |
 | Python loop (`openai/gpt-5.1`) | community `is-decimal-800937e9` | PASS | 5.6s | $0.0068 | [`res_2ea69a6f…`](https://orivoxx.vercel.app/results/res_2ea69a6f1de543c481d945793129d3bf) |
 | Codex CLI | `is-email-predicate` | FAIL | 492.7s | $0.7198 | [`res_e2767b1f…`](https://orivoxx.vercel.app/results/res_e2767b1f393b4adb8a0d74cdeeb0afca) |
 | python (`chaos: failing_tools`) | `itsdangerous-future-signature` | FAIL | 47.8s | $0.1129 | [`res_c1ba8d7b…`](https://orivoxx.vercel.app/results/res_c1ba8d7b435e4ae6b514138458fab8b7) |

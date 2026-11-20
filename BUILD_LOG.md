@@ -656,3 +656,7 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - `npm install express` inside the validation sandbox → exit 0 (12.6s).
 - `python3 -m pip install --target .deps requests` inside the validation sandbox → exit 0 (6.8s).
 - `urllib.request.urlopen("https://example.com")` through the same proxy → `URLError: Tunnel connection failed: 403 Forbidden` (exit 1). General egress remains blocked.
+
+**Claude Code on the fresh community task**
+
+- Extended the brand adapter with an optional model override and a truthful label. Claude Code 2.1.329 + `anthropic/claude-haiku-5.5` ran the fresh community task `is-decimal-800937e9` in 11.8s for **$0.0015** and passed at 100.0 (`res_74101d58…`). This completes the E2E requirement to run Claude Code against the newly validated task without using the exhausted Sonnet budget.

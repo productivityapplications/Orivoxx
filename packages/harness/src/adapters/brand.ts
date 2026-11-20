@@ -17,18 +17,26 @@ const BRAND: Record<BrandAgentId, { label: string; model: string }> = {
   "copilot-openrouter": { label: "GitHub Copilot CLI", model: "openai/gpt-5.1" },
 };
 
-export function createBrandAdapter(id: BrandAgentId): AgentAdapter {
+export interface BrandAdapterOptions {
+  /** Optional model override; the run records the actual model used. */
+  modelName?: string;
+}
+
+export function createBrandAdapter(
+  id: BrandAgentId,
+  options: BrandAdapterOptions = {},
+): AgentAdapter {
   const brand = BRAND[id];
   const model = AdapterModelSchema.parse({
     provider: "openrouter",
-    name: brand.model,
+    name: options.modelName ?? brand.model,
     baseUrl: "https://openrouter.ai/api/v1",
   });
 
   return {
     id: AdapterIdSchema.parse(id),
     version: "1.0.0",
-    label: `${brand.label} (${brand.model})`,
+    label: `${brand.label} (${model.name})`,
     kind: "harness",
     model,
     plan(input: AdapterRunInput): AdapterPlan {
