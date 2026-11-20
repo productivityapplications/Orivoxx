@@ -650,3 +650,9 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - Final video blocked by ElevenLabs 401.
 - GitHub OAuth end-to-end login still not exercised (no GitHub account credentials).
 - Copilot/Cursor remain excluded.
+
+**Proxy package checks (sandbox)**
+
+- `npm install express` inside the validation sandbox → exit 0 (12.6s).
+- `python3 -m pip install --target .deps requests` inside the validation sandbox → exit 0 (6.8s).
+- `urllib.request.urlopen("https://example.com")` through the same proxy → `URLError: Tunnel connection failed: 403 Forbidden` (exit 1). General egress remains blocked.
