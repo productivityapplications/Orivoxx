@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { groupReliability } from "@orivoxx/results";
+import { CURATED_REAL_TASKS } from "@orivoxx/benchmarks";
 
 import { StatusChip } from "@/components/status-chip";
 import { webLeaderboard } from "@/server/results";
@@ -43,7 +44,9 @@ export default async function AppHomePage() {
   const recent = [...board.entries]
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
     .slice(0, 5);
-  const proofEntry = attributed.find((entry) => entry.attribution?.proof != null);
+  const proofEntry =
+    attributed.find((entry) => entry.realTask !== undefined && entry.attribution?.proof != null) ??
+    attributed.find((entry) => entry.attribution?.proof != null);
 
   return (
     <div className="space-y-12">
@@ -77,7 +80,7 @@ export default async function AppHomePage() {
         </div>
         <dl className="grid grid-cols-2 gap-2 self-end">
           {[
-            ["Tasks", String(tasks.length)],
+            ["Tasks", String(tasks.length + CURATED_REAL_TASKS.length)],
             ["Adapters", "4"],
             ["Results", String(board.entries.length)],
             ["Attributed", String(attributed.length)],
@@ -211,8 +214,18 @@ export default async function AppHomePage() {
           <div>
             <h2 className="font-display text-3xl tracking-[-0.02em]">One intervention. One proof.</h2>
             <p className="mt-3 text-sm leading-7 text-secondary">
-              Replay writes the recorded actions into a fresh file map, applies one intervention,
-              and scores statically. Before step k the prefix is byte-identical. No model call.
+              {proofEntry?.realTask ? (
+                <>
+                  Replay reconstructs the workspace from the recorded files, applies the intercepted
+                  action, and re-runs the real test command in the sandbox. Before step k the prefix
+                  is byte-identical. No model call enters the score.
+                </>
+              ) : (
+                <>
+                  Replay writes the recorded actions into a fresh file map, applies one intervention,
+                  and scores statically. Before step k the prefix is byte-identical. No model call.
+                </>
+              )}
             </p>
             {proofEntry ? (
               <Link href={`/replay/${proofEntry.resultId}`} className="mt-4 inline-block text-xs text-accent-secondary hover:underline">
@@ -222,10 +235,10 @@ export default async function AppHomePage() {
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
-              ["baseline", proofEntry ? proofEntry.overall.toFixed(1) : "49.7"],
+              ["baseline", proofEntry ? proofEntry.overall.toFixed(1) : "0.0"],
               ["intervention", `retry @ ${proofEntry?.attribution?.proof?.intervention.stepIndex ?? 2}`],
               ["replay", `${proofEntry?.attribution?.proof?.counterfactual.replayedSteps ?? 6} steps`],
-              ["proof", proofEntry?.attribution?.proof ? proofEntry.attribution.proof.counterfactual.overall.toFixed(1) : "98.3"],
+              ["proof", proofEntry?.attribution?.proof ? proofEntry.attribution.proof.counterfactual.overall.toFixed(1) : "100.0"],
             ].map(([label, value], index) => (
               <div key={label} className="rounded-xl border border-border-subtle bg-panel p-3">
                 <p className="font-mono text-[9px] uppercase tracking-[0.1em] text-muted">{label}</p>
@@ -248,11 +261,11 @@ export default async function AppHomePage() {
           </p>
         </div>
         <div className="rounded-xl border border-border-subtle bg-inset p-4 font-mono text-[11px] leading-6 text-secondary">
-          <p><span className="text-accent">$</span> orivoxx bench --task taskboard --chaos tool_error</p>
+          <p><span className="text-accent">$</span> orivoxx bench --task itsdangerous-future-signature --chaos failing_tools</p>
           <p className="text-muted">49.7 · harness × recovery · 6 tool calls</p>
-          <p className="mt-3"><span className="text-accent">$</span> orivoxx replay --result res_64068a</p>
+          <p className="mt-3"><span className="text-accent">$</span> orivoxx replay --result res_c1ba8d7</p>
           <p className="text-muted">retry_policy@2 → 98.3 · PASS</p>
-          <p className="mt-3"><span className="text-accent">$</span> orivoxx diff --a res_64068a --b res_df4fc5</p>
+          <p className="mt-3"><span className="text-accent">$</span> orivoxx diff --a res_c1ba8d7 --b res_85394c</p>
           <p className="text-muted">+48.6 score · -20% tool errors</p>
         </div>
       </section>
@@ -275,9 +288,10 @@ export default async function AppHomePage() {
       <section>
         <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">\ 06 \ RESILIENCE</p>
         <h2 className="mt-2 font-display text-3xl tracking-[-0.02em]">Inject the fault. Measure the recovery.</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           {[
             ["tool_error", "A write fails with EACCES. The harness either retries or loses the artifact.", "Run with tool_error"],
+            ["failing_tools", "The real-task apply_patch is intercepted. The replay retries it and re-runs the real test.", "Run with failing_tools"],
             ["latency", "Every model call is delayed. The stopping policy is tested against the clock.", "Run with latency"],
             ["context_pressure", "Context is truncated and the step budget shrinks. Completeness is tested.", "Run with context_pressure"],
           ].map(([kind, body, cta]) => (

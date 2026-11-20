@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: "%s · Orivoxx",
   },
   description:
-    "A deterministic benchmark for AI software-engineering agents with counterfactual failure attribution: six metrics, three chaos modes, and a replay proof for every attributed failure.",
+    "A deterministic benchmark for AI software-engineering agents with counterfactual failure attribution: six metrics, four chaos modes, and a replay proof for attributed tool failures.",
   applicationName: "Orivoxx",
 };
 

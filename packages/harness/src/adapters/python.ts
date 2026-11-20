@@ -10,6 +10,7 @@ import { resolveOpenRouterModel, type OpenRouterModelOptions } from "./model.js"
 export const PYTHON_ADAPTER_ID = "python-openrouter";
 export const PYTHON_ADAPTER_VERSION = "1.0.0";
 export const AGENT_SCRIPT = "/opt/orivoxx/agents/python_openrouter.py";
+export const REAL_AGENT_SCRIPT = "/opt/orivoxx/agents/real_python_runner.py";
 
 export type OpenRouterAdapterOptions = OpenRouterModelOptions;
 
@@ -44,17 +45,22 @@ export function createPythonOpenRouterAdapter(
         );
       }
 
+      const script = input.startingFiles.some((file) => file.path === ".orivoxx/issue.md")
+        ? REAL_AGENT_SCRIPT
+        : AGENT_SCRIPT;
+
       return {
         kind: "process",
         command: {
           file: "python3",
-          args: [AGENT_SCRIPT],
+          args: [script],
           env: {
             MODEL_PROXY_URL: "http://model-proxy:8080/v1",
             MODEL_NAME: model.name,
             MAX_STEPS: String(input.limits.maxSteps),
             TASK_ID: input.task.id,
             ORIVOXX_CHAOS: input.chaos,
+            ISSUE_PATH: "/workspace/.orivoxx/issue.md",
             PYTHONUNBUFFERED: "1",
           },
         },

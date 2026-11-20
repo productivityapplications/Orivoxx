@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { appendFileSync } from "node:fs";
+import { connect as netConnect } from "node:net";
 import {
   createServer,
   request as httpRequest,
@@ -33,7 +34,13 @@ export const PROXY_LIMITS = {
   upstreamTimeoutMs: 60_000,
 } as const;
 
-const FORWARDED_REQUEST_HEADERS = ["content-type", "accept"] as const;
+const FORWARDED_REQUEST_HEADERS = [
+  "content-type",
+  "accept",
+  "anthropic-version",
+  "anthropic-beta",
+  "openai-beta",
+] as const;
 
 function jsonError(response: ServerResponse, status: number, code: string): void {
   if (response.headersSent) {
@@ -129,6 +136,37 @@ function appendTrace(trace: ModelTrace, event: Record<string, unknown>): void {
   }
 }
 
+const DEFAULT_CONNECT_ALLOWLIST = [
+  "registry.npmjs.org",
+  "registry.yarnpkg.com",
+  "pypi.org",
+  "files.pythonhosted.org",
+] as const;
+
+function handleConnect(
+  request: IncomingMessage,
+  socket: import("node:stream").Duplex,
+  allowlist: readonly string[],
+): void {
+  const target = request.url ?? "";
+  const [host, port] = target.split(":");
+
+  if (host === undefined || port !== "443" || !allowlist.includes(host)) {
+    socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");
+    return;
+  }
+
+  const upstream = netConnect({ host, port: 443 });
+  upstream.once("connect", () => {
+    socket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
+    socket.pipe(upstream);
+    upstream.pipe(socket);
+  });
+  upstream.once("error", () => {
+    socket.end("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+  });
+}
+
 function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -207,6 +245,7 @@ function handleRequest(
 
     const headers: Record<string, string> = {
       authorization: `Bearer ${apiKey}`,
+      "x-api-key": apiKey,
       "x-title": "Orivoxx Benchmark",
     };
 
@@ -445,6 +484,9 @@ export async function startModelProxy(options: ModelProxyOptions): Promise<Model
       upstreamTimeoutMs,
       trace,
     );
+  });
+  server.on("connect", (request, socket) => {
+    handleConnect(request, socket, DEFAULT_CONNECT_ALLOWLIST);
   });
 
   await new Promise<void>((resolve, reject) => {

@@ -2,416 +2,266 @@
 
 **Benchmark the agent, not just the model.**
 
-Orivoxx benchmarks AI software-engineering agents and attributes their failures. It runs an agent configuration against a versioned `PROJECT_SPEC.md` inside a hardened Docker sandbox, scores the produced repository deterministically on six metrics, then names every failure by **layer × mode** and proves the attribution with a counterfactual replay.
+[![Next.js](https://img.shields.io/badge/Next.js-16.4.6-black?style=flat-square)](https://nextjs.org/)
+[![tests](https://img.shields.io/badge/tests-494%20passing-17CF97?style=flat-square)](#quickstart)
+[![score](https://img.shields.io/badge/score-deterministic-17CF97?style=flat-square)](#failure-attribution--replay)
+[![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+
+![Orivoxx landing](docs/screenshots/01-landing.png)
+
+Orivoxx is a benchmarking and failure-attribution platform for AI software-engineering agents. It runs a complete agent configuration — model, harness, tools, orchestration, and stopping conditions — against real GitHub issues inside a hardened Docker sandbox. A deterministic engine scores the produced repository. When the run fails, Orivoxx names the failure by **layer × mode** and proves the diagnosis with a counterfactual replay that re-runs the real test command.
 
 **No model is in the score path. No attribution is accepted without evidence.**
 
-[![deployed](https://img.shields.io/badge/deployed-orivoxx.vercel.app-17CF97?style=flat-square)](https://orivoxx.vercel.app)
-[![tests](https://img.shields.io/badge/unit%20tests-491%20passing-17CF97?style=flat-square)](#testing)
-[![attribution](https://img.shields.io/badge/attribution-proof--backed-17CF97?style=flat-square)](#failure-attribution)
-[![sandbox](https://img.shields.io/badge/agent%20execution-Docker%20sandbox-75A7FF?style=flat-square)](#the-sandbox-guarantee)
-[![license](https://img.shields.io/badge/license-MIT-8C8C85?style=flat-square)](LICENSE)
+Live: <https://orivoxx.vercel.app>
 
-## Table of contents
+## What is Orivoxx
 
-- [Live demo](#live-demo)
-- [Demo video](#demo-video)
-- [Why this exists](#why-this-exists)
-- [What Orivoxx measures](#what-orivoxx-measures)
-- [Failure attribution](#failure-attribution)
-- [Replay and proof](#replay-and-proof)
-- [Reliability profile](#reliability-profile)
-- [Screenshots](#screenshots)
-- [Architecture](#architecture)
-- [Quickstart](#quickstart)
-- [Run a real agent](#run-a-real-agent)
-- [Real repository tasks](#real-repository-tasks)
-- [Community and private tasks](#community-and-private-tasks)
-- [Brand-name agents](#brand-name-agents)
-- [Adding a benchmark task](#adding-a-benchmark-task)
-- [Adding an adapter](#adding-an-adapter)
-- [The deterministic guarantee](#the-deterministic-guarantee)
-- [The sandbox guarantee](#the-sandbox-guarantee)
-- [Results, retention, and privacy](#results-retention-and-privacy)
-- [Public API](#public-api)
-- [Project structure](#project-structure)
-- [Testing](#testing)
-- [Hackathon](#hackathon)
-- [License](#license)
-- [Acknowledgements](#acknowledgements)
+Agent leaderboards usually compare foundation models behind one fixed harness. That hides the variable practitioners actually choose. Orivoxx treats the whole configuration as the subject: the same model can be run through Claude Code, Codex CLI, or Aider, and the result records the adapter, model, task version, ruleset, scoring config, and repository fingerprint.
 
-## Live demo
+A run produces:
 
-**<https://orivoxx.vercel.app>** · app home at **[/app](https://orivoxx.vercel.app/app)**
+- **Primary success** for real tasks: the repository's test command exits `0`.
+- **Six metrics**: steps, tool calls, tool-error rate, tokens, cost, and duration.
+- **Deterministic quality flags**: security patterns and structural maintainability, always published next to the test result.
+- **A bounded trace** of model calls and tool calls, with arguments and results redacted.
+- **An attribution** — one of 20 layer × mode cells, a rule id, step evidence, and (when a tool fault is intercepted) a replay proof.
+- **A produced-code diff** as text, never the full repository or archive.
 
-The deployment is read-only for real results. The fake baseline is self-serve: `/submit` creates a real, immutable scorecard without a model call. Real adapter runs are organizer-executed in Docker and published to the shared store.
+The scoring engine imports no provider, adapter, or network module; a test proves that invariant on the import graph.
 
-![Orivoxx landing page](docs/assets/screens/landing.png)
+## Brand Agents
 
-## Demo video
+| Agent | Runtime | OpenRouter route | Status |
+|---|---|---|---|
+| **Claude Code 2.1.329** | sandbox | `ANTHROPIC_BASE_URL` through the model proxy; sentinel auth token | Runs; solved `slugify-max-length` |
+| **OpenAI Codex CLI 0.171.0** | sandbox | generated `config.toml`, Responses wire API through the proxy | Runs; passed the legacy tasks; failed the multi-file `is-email-predicate` |
+| **Aider 0.86.2** | sandbox | OpenAI-compatible proxy, pinned in the image | Runs as the baseline |
+| **GitHub Copilot CLI 1.0.114** | excluded | no OpenRouter base-url override; org policy denied access | Excluded |
+| **Cursor** | excluded | not headless-routeable through OpenRouter | Excluded |
+| **python-openrouter** | sandbox | custom Python loop through the proxy | Chaos and real-task proof harness |
 
-[`demo/orivoxx-demo.mp4`](demo/orivoxx-demo.mp4) — 2:21, 1920 × 1080, H.264/AAC, ElevenLabs narration, word-synced captions, −15.9 LUFS. Every visual is a real Playwright recording of this build: landing, measurement, a real run, attribution, replay proof, reliability bars, and close.
+The real provider key never enters the sandbox. Each CLI receives `orivoxx-sandbox-proxy`; the host-side sidecar injects the OpenRouter key and forwards only model calls plus an allowlisted package-manager CONNECT tunnel. GitHub Copilot and Cursor are deliberately not in the comparison.
 
-Production notes: [`demo/README.md`](demo/README.md) · script: [`demo/SCRIPT.md`](demo/SCRIPT.md) · reference study: [`demo/REFERENCE_NOTES.md`](demo/REFERENCE_NOTES.md).
+## Real Tasks
 
-## Why this exists
+The public comparison set uses real repositories, pinned base commits, a real issue, and one test command. The agent never sees the test command. A task declares its dependency install command; packages are fetched inside the sandbox through the allowlisted registry tunnel (`registry.npmjs.org`, `registry.yarnpkg.com`, `pypi.org`, `files.pythonhosted.org`). General egress stays closed.
 
-Agent leaderboards usually compare foundation models with a fixed harness. That hides the variable practitioners actually choose. Worse, when an agent fails, a trace shows **what happened** but not **why**: developers stare at 47 steps and guess whether the model, the harness, a tool, or the specification is responsible.
+| Task | Repository | License | What must change | Test |
+|---|---|---|---|---|
+| `slugify-max-length` | [`sindresorhus/slugify`](https://github.com/sindresorhus/slugify) | MIT | `index.js` + `index.d.ts` | `node --test .orivoxx/acceptance.test.mjs` |
+| `is-email-predicate` | [`sindresorhus/is`](https://github.com/sindresorhus/is) | MIT | `source/index.ts` + `source/types.ts` | `node --experimental-transform-types --test .orivoxx/acceptance.test.mjs` |
+| `itsdangerous-future-signature` | [`pallets/itsdangerous`](https://github.com/pallets/itsdangerous) | BSD-3-Clause | `exc.py` + `timed.py` + `__init__.py` | `python3 .orivoxx/run_pytest.py` |
 
-Orivoxx makes the harness a first-class variable and turns failure analysis into a deterministic, proof-backed result:
+All three passed the six validation gates: clone, install, test fails at base, deterministic ×3, time bounded, permissive license. Acceptance fixtures live under `.orivoxx/` and are rewritten after the agent exits, so an agent cannot weaken the test.
 
-- The **task** is a versioned spec plus a starting repository and ruleset.
-- The **run** executes in a sandbox and records a bounded trace.
-- The **score** is static. Produced code is never executed by the scoring engine.
-- The **attribution** names a layer × mode cell from trace evidence.
-- The **proof** is a replay that changes one thing and crosses the pass threshold.
+Recorded runs:
 
-## What Orivoxx measures
+| Agent | Task | Test | Duration | Cost | Result |
+|---|---|---|---:|---:|---|
+| Claude Code | `slugify-max-length` | PASS | 232.7s | $0.9044 | [`res_85394cc5…`](https://orivoxx.vercel.app/results/res_85394cc5a29a4c89b0f7613e229ebd99) |
+| Python loop (`openai/gpt-5.1`) | community `is-decimal-800937e9` | PASS | 5.6s | $0.0068 | [`res_2ea69a6f…`](https://orivoxx.vercel.app/results/res_2ea69a6f1de543c481d945793129d3bf) |
+| Codex CLI | `is-email-predicate` | FAIL | 492.7s | $0.7198 | [`res_e2767b1f…`](https://orivoxx.vercel.app/results/res_e2767b1f393b4adb8a0d74cdeeb0afca) |
+| python (`chaos: failing_tools`) | `itsdangerous-future-signature` | FAIL | 47.8s | $0.1129 | [`res_c1ba8d7b…`](https://orivoxx.vercel.app/results/res_c1ba8d7b435e4ae6b514138458fab8b7) |
 
-| Bench | Weight | Source |
-|---|---|---|
-| **Spec conformance** | 60% | Declared deterministic checks in the ruleset |
-| **Security patterns** | 25% | Declared security requirements |
-| **Structural maintainability** | 15% | Static import graph: cycles, fan-out, orphan ratio, module count |
+The Codex failure is a real model decision failure: it added `email: isEmail` but did not define the predicate, so the acceptance test failed. It is attributed to `model × decision` without a counterfactual. The chaos run is the proven attribution.
 
-Six per-run metrics come from the trace and the provider usage object:
+## Failure Attribution & Replay
 
-| Metric | Source |
-|---|---|
-| Artifact score | deterministic engine |
-| Steps | model + tool steps |
-| Tool calls + error rate | trace |
-| Prompt / completion tokens | provider usage via proxy |
-| Cost (USD) | provider usage via proxy |
-| Duration | wall clock |
-
-Three chaos modes exercise resilience: `tool_error` (a write fails with EACCES), `latency` (fixed delay per model call), and `context_pressure` (truncated context, reduced step budget).
-
-Published detail: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) and [`docs/OBSERVABILITY_SPEC.md`](docs/OBSERVABILITY_SPEC.md).
-
-## Failure attribution
-
-A failure is attributed to one of **20 cells**: five layers × four modes.
+A trace says *what* happened. Orivoxx answers *why*. Every attribution is a cell in a 5 × 4 taxonomy:
 
 | Layer | Question |
 |---|---|
-| Spec | Is the task contradictory, ambiguous, or underspecified? |
-| Model | Did the model reason incorrectly, ignore an instruction, or hallucinate? |
-| Harness | Did orchestration swallow an error, skip a retry, or stop badly? |
-| Tool | Did a tool return a wrong result or fail from its own fault? |
-| Environment | Did an external service fail (network, timeout, quota)? |
+| **Spec** | Was the requirement missing, contradictory, or ambiguous? |
+| **Model** | Did the model reason incorrectly, ignore an instruction, or hallucinate? |
+| **Harness** | Did orchestration swallow an error, skip a retry, or stop badly? |
+| **Tool** | Did a tool return a wrong result or fail from its own fault? |
+| **Environment** | Did an external service fail (network, timeout, quota)? |
 
 | Mode | Question |
 |---|---|
-| Decision | Wrong choice among viable options |
-| Execution | Correct choice, failed to execute |
-| Recovery | Should have recovered from a fault, did not |
-| Detection | Should have noticed an inconsistency, did not |
+| **Decision** | Wrong choice among viable options |
+| **Execution** | Correct choice, failed to execute |
+| **Recovery** | Should have recovered from a fault, did not |
+| **Detection** | Should have noticed an inconsistency, did not |
 
-Twelve deterministic rules ship today. A rule returns a cell, a step, and evidence; it never inspects source content, and it never calls a model.
+Seventeen deterministic rules ship today, including `test_failed_after_patch` (model × decision), `patch_apply_failed_unhandled` (harness × recovery), `test_run_skipped` (harness × execution), `test_timeout` (environment × execution), and `issue_ambiguous_vs_test` (spec × detection). A rule returns a cell, a step, and evidence; it never inspects source text and never calls a model.
 
-**Real recorded example**
+**Proven example — `harness × recovery`**
 
-```text
-Attributed: harness × recovery
-Evidence: step 2, write_file → EACCES, no retry, downstream failure
-Proof: replay with retry policy → PASS (49.7 → 98.3)
-(intervention at step 2, replay steps 2–7, deterministic scoring)
-```
-
-The proof is stored with the result. If no intervention crosses the threshold, the result says **unattributed** and names the reason. No cell is fabricated.
-
-Spec: [`docs/ATTRIBUTION_SPEC.md`](docs/ATTRIBUTION_SPEC.md).
-
-## Replay and proof
-
-Replay is memoized and deterministic:
-
-1. Materialize the task's starting files in memory.
-2. Replay recorded actions before the intervention; the prefix is byte-identical by construction.
-3. Apply one intervention at step `k` (retry policy, stop policy, or action replacement).
-4. Replay the remaining recorded actions.
-5. Score with the existing deterministic engine.
-
-No model call. No produced code execution. No filesystem writes. The no-intervention invariant is tested: replay reproduces the baseline exactly.
-
-## Reliability profile
-
-A single score is a sample. The profile aggregates stored runs for one adapter and task:
-
-- artifact score mean ± standard deviation;
-- `pass@k` (score ≥ threshold and a completed exit);
-- layer distribution behind attributed failures;
-- pass rate per chaos condition;
-- trend across the run window.
-
-The leaderboard's stacked bar is the layer distribution: spec violet, model blue, harness red, tool amber, environment neutral.
-
-## Screenshots
-
-All screenshots are Playwright captures of the running build against real stored results.
-
-| Landing | App home |
-|---|---|
-| ![Landing](docs/assets/screens/landing.png) | ![App home](docs/assets/screens/app.png) |
-
-| Leaderboard with reliability | Result scorecard |
-|---|---|
-| ![Leaderboard](docs/assets/screens/leaderboard.png) | ![Result](docs/assets/screens/result-scorecard.png) |
-
-| Attribution card | Replay proof |
-|---|---|
-| ![Attribution](docs/assets/screens/attribution.png) | ![Replay](docs/assets/screens/replay.png) |
-
-| Trace timeline | Compare |
-|---|---|
-| ![Trace](docs/assets/screens/trace.png) | ![Compare](docs/assets/screens/compare.png) |
-
-| Task detail | Docs: attribution |
-|---|---|
-| ![Task](docs/assets/screens/task.png) | ![Docs](docs/assets/screens/docs-attribution.png) |
-
-## Architecture
+The `failing_tools` chaos mode intercepts the custom Python harness's single multi-file `apply_patch` call at step 2. The agent does not recover; the real test stays red.
 
 ```text
-apps/web (Next.js 16 on Vercel)
-  / marketing landing · /app orientation · catalogue · submit · result · trace · replay
-  leaderboard · compare · docs · privacy
-        │
-        ├── packages/benchmarks   versioned tasks · rulesets · deterministic score · static graph
-        ├── packages/harness      adapters · Docker executor · proxy · capture · trace · diff
-        ├── packages/attribution  12 deterministic rules over trace + scorecard
-        ├── packages/replay       memoized counterfactual replay + proof
-        ├── packages/results      append-only store · reliability aggregation · seed fallback
-        └── packages/core         contracts · trace schemas · checks · evidence · verdict
-        │
-        └── Upstash Redis         immutable scorecards, traces, attribution, proofs + indexes
+Baseline:      0.0  (test failed)
+Attribution:   harness × recovery
+Rule:          patch_apply_failed_unhandled
+Evidence:      step 2 · apply_patch → EIO (injected), no retry
+Intervention:  retry_policy at step 2
+Replay:        3 actions re-applied; real test command exits 0
+Counterfactual: 100.0 PASS
 ```
 
-Real adapter runs execute locally in Docker and write scorecards to Upstash. Vercel serves the UI, read APIs, and the self-serve fake baseline.
+- Result: <https://orivoxx.vercel.app/results/res_c1ba8d7b435e4ae6b514138458fab8b7>
+- Replay: <https://orivoxx.vercel.app/replay/res_c1ba8d7b435e4ae6b514138458fab8b7>
 
-Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/ADAPTERS.md`](docs/ADAPTERS.md), [`docs/SANDBOX.md`](docs/SANDBOX.md).
+Replay for a real task reconstructs the workspace from the recorded starting files, applies the intercepted action, reinstalls declared dependencies, and re-runs the real test command in the same sandbox. It makes no model call. The scoring engine never executes produced code.
+
+![Attribution](docs/screenshots/06-attribution-failure.png)
+![Replay proof](docs/screenshots/07-replay-proof.png)
+
+## Community Tasks
+
+Anyone can submit a real GitHub task at `/tasks/new`: `repoUrl`, `baseCommit`, `issueText`, one allowlisted `testCommand`, and `public` or `private` visibility. GitHub OAuth is used when `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` are configured; otherwise an HttpOnly anonymous token hashes to a stable submitter id.
+
+Six mechanical gates run in the same Docker sandbox:
+
+| Gate | Check |
+|---|---|
+| **Cloned** | exact base commit fetched; 60s budget |
+| **Installs** | declared install command succeeds through the registry tunnel; 300s |
+| **Test fails at base** | nonzero exit before the agent runs |
+| **Deterministic** | three failing runs at base |
+| **Time bounded** | every run completes under 600s |
+| **License** | GitHub SPDX id, or LICENSE-file heuristic, against a permissive allowlist |
+
+A validated community task is promoted only by a curator in `CURATOR_USERNAMES`. Private tasks return **403** to every other viewer. Limits: 3 pending per user, 10 per 24h per user, 20 globally per 24h. The operator kill switch `ORIVOXX_RUNS_DISABLED=1` stops all mutating submissions before rate limiting or model work.
+
+Live examples:
+
+- Community task validated and promoted: <https://orivoxx.vercel.app/tasks/is-decimal-d36f6021>
+- Private task, owner 200 / second user 403: <https://orivoxx.vercel.app/tasks/is-decimal-263f95c1>
+- Fresh E2E community task: <https://orivoxx.vercel.app/tasks/is-decimal-800937e9>
+
+![Community task](docs/screenshots/08-community-task.png)
 
 ## Quickstart
-
-**Requirements:** Node.js 24.22.1+, pnpm 10+, Docker (only for real adapter runs).
 
 ```bash
 git clone https://github.com/productivityapplications/Orivoxx.git
 cd Orivoxx
+corepack enable
 pnpm install --frozen-lockfile
-pnpm build
-pnpm dev
+cp .env.example .env.local   # add OPENROUTER_API_KEY for real agent runs
 ```
 
-Open <http://localhost:3000>. Without environment variables the app serves the bundled seed rows and the fake baseline still works.
-
-For the provider and shared store, copy `.env.example` to `.env.local`:
+Web app:
 
 ```bash
-MODEL_PROVIDER=openrouter
-MODEL_BASE_URL=https://openrouter.ai/api/v1
-MODEL_API_KEY=            # or OPENROUTER_API_KEY
-MODEL_NAME=openai/gpt-4o-mini
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
+pnpm --filter web build
+pnpm --filter web start     # http://localhost:3000
 ```
 
-### Run the fake baseline from the CLI
+Verify the repository:
 
 ```bash
-pnpm bench:list
-pnpm bench:run --task taskboard --adapter fake --variant compliant
-```
-
-## Run a real agent
-
-```bash
-pnpm --filter @orivoxx/harness build
-pnpm --filter @orivoxx/harness sandbox:build
-
-# Baseline
-pnpm bench:run --task taskboard --adapter python-openrouter --model openai/gpt-4o-mini
-
-# Inject a transient tool failure and produce an attribution + proof
-pnpm bench:run --task taskboard --adapter python-openrouter \
-  --model deepseek/deepseek-chat-v3-0324 --chaos tool_error
-
-# Head-to-head: same model, two harnesses
-pnpm bench:run --task taskboard --adapter aider-openrouter --model openai/gpt-4o-mini
-```
-
-Synthetic TaskBoard runs (kept for attribution/proof history; not the headline set):
-
-| Adapter | Model | Chaos | Overall | Result | Proof |
-|---|---|---|---:|---|---|
-| python-openrouter | openai/gpt-4o-mini | none | 96.4 | `res_df4fc568…` | — |
-| python-openrouter | deepseek/deepseek-chat-v3-0324 | tool_error | 49.7 | `res_64068a9c…` | **98.3 PASS** |
-| python-openrouter | openai/gpt-4o-mini | tool_error | 49.9 | `res_0427d9f5…` | 59.9 (insufficient) |
-| python-openrouter | openai/gpt-4o-mini | latency | 59.9 | `res_7607dd55…` | — |
-| python-openrouter | openai/gpt-4o-mini | context_pressure | 94.9 | `res_186441ae…` | — |
-| python-openrouter | deepseek/deepseek-chat-v3-0324 | none | 98.1 | `res_71626175…` | — |
-| aider-openrouter | openai/gpt-4o-mini | none | 97.3 | `res_a39c6e29…` | — |
-
-The insufficient 49.9 proof is shown honestly: that generated project route did not satisfy the critical marker even after retry, so the harness cell is rule-matched but not proven.
-
-## Real repository tasks
-
-Six curated tasks replace synthetic specs as the public comparison set. Each pins a real GitHub repository at a base commit, an issue, and a single test command. The primary success condition is **test exit 0**; security and maintainability are deterministic quality flags. The agent is never shown the test command.
-
-| Task | Repository | License | Test |
-|---|---|---|---|
-| `is-decimal-single-char` | `wooorm/is-decimal` | MIT | `node -e "…isDecimal('12')…"` |
-| `is-hexadecimal-single-char` | `wooorm/is-hexadecimal` | MIT | `node -e "…isHexadecimal('FF')…"` |
-| `is-alphabetical-single-char` | `wooorm/is-alphabetical` | MIT | `node -e "…isAlphabetical('ab')…"` |
-| `is-word-character-single-char` | `wooorm/is-word-character` | MIT | `node -e "…isWordCharacter('ab')…"` |
-| `is-whitespace-single-char` | `wooorm/is-whitespace-character` | MIT | `node -e "…isWhitespaceCharacter('  ')…"` |
-| `is-number-reject-hex` | `jonschlinkert/is-number` | MIT | `node -e "…isNumber('0x10')…"` |
-
-### Real repository runs
-
-| Agent | Task | Test | Duration | Cost | Result |
-|---|---|---|---:|---:|---|
-| Claude Code | `is-decimal-single-char` | PASS | 32.4s | $0.1512 | `res_77ab9c6d…` |
-| Codex CLI | `is-hexadecimal-single-char` | PASS | 52.7s | — | `res_6006423b…` |
-| Codex CLI | `is-number-reject-hex` | PASS | 40.6s | — | `res_9da7482d…` |
-| Codex CLI | `is-whitespace-single-char` | PASS | 66.1s | $0.0643 | `res_5d3d11b2…` |
-| Aider (baseline) | `is-word-character-single-char` | PASS | 35.2s | $0.0083 | `res_2016ec8f…` |
-
-All brand agents route through OpenRouter via the sandbox proxy. GitHub Copilot CLI is excluded: its org policy/auth does not expose an OpenRouter base URL.
-
-Recorded brand-agent runs (all test-pass): Claude Code 2/2, Codex 2/2, Aider baseline 1/1. Results are stored with `taskSuccess`, `test`, six metrics, trace, and a real-task metadata block.
-
-## Community and private tasks
-
-Anyone can submit `{ repoUrl, baseCommit, issueText, testCommand, visibility }` from `/tasks/new`. GitHub OAuth is preferred when configured; otherwise an HttpOnly anonymous token hashes to a stable submitter id.
-
-Six validation gates run in the same sandbox: clone, install, test fails at base, deterministic (3×), time bounded (600s), license. A valid community task is promoted by a curator from `CURATOR_USERNAMES`; private tasks return **403** to every other viewer. Queue keys: `orivoxx:task:{id}`, `orivoxx:task:{id}:validation`, `orivoxx:user:{id}:tasks`, `orivoxx:validations:pending`, `orivoxx:validations:daily`. Rate limits: 3 pending / 10 per 24h per user / 20 globally.
-
-Worker: `node --env-file=.env.local packages/harness/scripts/validate-task.mjs` on an organizer machine with Docker.
-
-## Brand-name agents
-
-| Agent | Runtime | OpenRouter routing | Status |
-|---|---|---|---|
-| Claude Code 2.1.329 | sandbox | `ANTHROPIC_BASE_URL` + auth token through the proxy | Runs |
-| OpenAI Codex CLI 0.171.0 | sandbox | Responses wire API through the proxy | Runs |
-| Aider 0.86.2 | sandbox | OpenAI-compatible proxy, pinned | Runs (baseline) |
-| GitHub Copilot CLI 1.0.114 | excluded | requires Copilot org policy/auth; no OpenRouter base-url override | Excluded |
-
-The real provider key never enters the sandbox. Each CLI receives the proxy sentinel; the sidecar injects the OpenRouter key host-side.
-
-## Adding a benchmark task
-
-1. Create `packages/benchmarks/src/tasks/<task-id>/` with `PROJECT_SPEC.md`, `starting/`, `fixtures/`, `index.ts`, `generated.ts`.
-2. Declare requirements and deterministic checks. Requirement ids are immutable per task version.
-3. Add compliant and regressed fixtures.
-4. Set `rulesetVersion` and `scoringConfigVersion`; changing a rule or weight requires a bump.
-5. Register the task and add fixture tests.
-6. Record a run.
-
-Template: [`docs/BENCHMARK_TASK_TEMPLATE.md`](docs/BENCHMARK_TASK_TEMPLATE.md).
-
-## Adding an adapter
-
-1. Add `packages/harness/src/adapters/<id>.ts` with a factory that validates its model and returns one argv command.
-2. Register it in `src/adapters/registry.ts`.
-3. Put the agent entry point in `packages/harness/agents/` and copy it into `docker/sandbox.Dockerfile` if it runs in the image.
-4. Emit trace events to `ORIVOXX_TRACE_FILE`; model calls are recorded by the proxy.
-5. Add plan/network/model-binding tests and record a real run.
-
-Adapters never receive a provider key. Model calls use the sentinel `orivoxx-sandbox-proxy` through the allowlisted proxy.
-
-## The deterministic guarantee
-
-- The score module imports only deterministic task, rule, and result types. A test asserts its import graph contains no provider or adapter module.
-- A deterministic `FAIL` overrides any model claim. Model output cannot create requirement ids, paths, verdicts, or scores.
-- Missing evidence is `UNVERIFIED`, never `PASS`.
-- Replay reproduces the baseline exactly with no intervention; the proof is a second deterministic score.
-- Every leaderboard-valid result records task/ruleset/scoring/adapter versions and a repository fingerprint.
-
-## The sandbox guarantee
-
-- Only `packages/harness` executes an agent, only through `DockerExecutor`.
-- Non-root uid 10001, read-only rootfs, bounded tmpfs `/tmp`, quotas, wall-clock kill.
-- No platform secrets, no Docker socket, no host mount beyond the run workspace.
-- The agent has no internet route; the proxy sidecar is the only egress and forwards only `/v1/*`.
-- The scoring engine never runs produced code, tests, builds, or installs.
-
-## Results, retention, and privacy
-
-A result stores a bounded scorecard, trace events (redacted summaries), six metrics, chaos metadata, attribution, proof, and the diff as text. It never stores raw source trees, prompts, tool contents, or keys. Retention is 90 days. The store is append-only.
-
-Full detail: [`docs/RESULTS_RETENTION.md`](docs/RESULTS_RETENTION.md) and [`PRIVACY_NOTICE.md`](PRIVACY_NOTICE.md).
-
-## Public API
-
-| Route | Method | Purpose |
-|---|---|---|
-| `/api/v1/tasks` | GET | Task catalogue |
-| `/api/v1/tasks/:id` | GET | Spec, requirements, starting files |
-| `/api/v1/leaderboard` | GET | Ranked rows + reliability profiles |
-| `/api/v1/results` | GET | Same projection |
-| `/api/v1/results/:id` | GET | Full result incl. trace, metrics, attribution |
-| `/api/v1/runs` | POST | Fake baseline run |
-| `/api/v1/compare` | GET | Two results, metric deltas, attribution diff |
-| `/api/v1/attribute/:runId` | POST | Stored attribution for a result |
-| `/api/v1/replay` | POST | Stored counterfactual candidate |
-| `/api/v1/health` | GET | Provider/store status |
-
-## Project structure
-
-```text
-apps/web                 marketing, app home, product routes, read APIs
-packages/core            contracts, trace schemas, checks, evidence, verdict
-packages/benchmarks      tasks, rulesets, score, static graph
-packages/harness         adapters, Docker, proxy, capture, trace, diff
-packages/attribution     12 rules over trace + scorecard
-packages/replay          counterfactual replay + proof
-packages/results         result contracts, stores, reliability aggregation
-data/seed-results.json   recorded fake-baseline fallback rows
-docs/                    architecture, scoring, attribution, sandbox, UI references
-demo/                    narrated video, script, reference study
-```
-
-## Testing
-
-```bash
-pnpm -r test        # 491 unit tests
 pnpm -r typecheck
 pnpm -r lint
-pnpm -r build
+pnpm -r test                # 494 unit tests; Docker integration is opt-in
+pnpm test:e2e               # 5 Playwright flows against a throwaway local store
+```
 
-pnpm test:e2e       # submit → run → score → leaderboard, dark/overflow checks
+Run a real task:
 
-# Docker integration (requires the image)
-pnpm --filter @orivoxx/harness sandbox:build
+```bash
+pnpm bench:real --task slugify-max-length --adapter claude-code-openrouter
+pnpm bench:real --task itsdangerous-future-signature --adapter python-openrouter \
+  --model anthropic/claude-sonnet-4.5 --chaos failing_tools
+```
+
+The sandbox image is pinned and reproducible:
+
+```bash
+pnpm --filter @orivoxx/harness sandbox:build   # orivoxx/sandbox:1.0.0
+```
+
+Optional Docker integration tests:
+
+```bash
 ORIVOXX_DOCKER_TESTS=1 pnpm --filter @orivoxx/harness test
 ```
 
-The suite covers parser fixtures, real-task loaders and test-command parsing, brand adapter routing, community queue rates,, deterministic precedence, malicious archives, secret redaction, schema failures, provider timeouts, prompt injection, origin checks, rate limits, static import extraction, structural metrics, leaderboard ordering, version-field enforcement, trace redaction, attribution fixtures, replay invariants, sandbox quotas, artifact capture, adapter contracts, and responsive dark UI.
+## Architecture
 
-## Hackathon
+```text
+Browser
+  │  dark-first Next.js App Router UI
+  ▼
+Vercel (apps/web)
+  ├── read APIs + leaderboard + result/replay pages
+  ├── community task submission + validation queue
+  └── rate limits, origin checks, secure headers, operator kill switch
+        │
+        ▼
+Upstash Redis
+  ├── immutable result scorecards + traces + proofs
+  ├── leaderboard indexes + reliability aggregation
+  └── community tasks, validation events, pending queue, rate counters
+        │
+        ▼
+Organizer runner (VPS, Docker required)
+  ├── packages/harness: clone, sandbox, adapters, capture, test
+  ├── packages/benchmarks: task registry, real-task validation, deterministic score
+  ├── packages/attribution: 17 deterministic rules over trace + scorecard
+  ├── packages/replay: counterfactual proof
+  └── packages/core: contracts, redaction, static checks
+        │
+        ▼
+Docker sandbox (orivoxx/sandbox:1.0.0)
+  ├── non-root, read-only rootfs, tmpfs /tmp, no capabilities, resource limits
+  ├── model-proxy sidecar: model egress + allowlisted package CONNECT only
+  ├── Claude Code / Codex CLI / Aider pinned in the image
+  └── real test command runs inside the sandbox, never on the host
+```
 
-Built for the **HackCulture AI Global Hackathon** — track: *Build a Benchmarking Platform for AI Agents, Not Just Models*. Deadline: 21 November 2026.
+Safety boundaries:
 
-- 20-cell attribution taxonomy with counterfactual proof.
-- Six metrics, three chaos modes, reliability profile.
-- Real Docker sandbox with an allowlisted model proxy.
-- Three adapters; recorded runs and an honest insufficient proof.
-- Complete marketing landing and app home.
+- Only `packages/harness` executes agent or test processes, and only through the Docker runner.
+- The scoring engine is static: it never runs produced code, tests, builds, package installs, or shell commands.
+- No platform secrets in the sandbox; the model proxy injects the provider key host-side.
+- Archives are processed in memory and bounded; traversal, symlinks, duplicate paths, and oversized input are rejected.
+- Result exports contain bounded scorecard JSON and a produced-code diff as text, not full source, archives, prompts, or raw model output.
+- Attribution is bounded by evidence; a deterministic `FAIL` overrides any model claim, and missing evidence is `UNVERIFIED`.
 
-More: [`docs/HACKATHON.md`](docs/HACKATHON.md).
+## Screenshots
+
+All captures are Playwright screenshots of the production build. Full set in [`docs/screenshots/`](docs/screenshots/).
+
+| Landing | App |
+|---|---|
+| ![Landing](docs/screenshots/01-landing.png) | ![App](docs/screenshots/02-app.png) |
+
+| Real tasks | Leaderboard |
+|---|---|
+| ![Tasks](docs/screenshots/03-tasks.png) | ![Leaderboard](docs/screenshots/04-leaderboard.png) |
+
+| Result | Attribution |
+|---|---|
+| ![Result](docs/screenshots/05-result-pass.png) | ![Attribution](docs/screenshots/06-attribution-failure.png) |
+
+| Replay proof | Community task |
+|---|---|
+| ![Replay](docs/screenshots/07-replay-proof.png) | ![Community](docs/screenshots/08-community-task.png) |
+
+## Honest limitations
+
+- **Provider budget is real.** The final brand-agent runs hit the OpenRouter account credit ceiling. Completed runs are reported; runs that received `402` are excluded rather than mislabelled as model failures. Re-run with a funded key to extend the table.
+- **Codex failed one multi-file task.** That is a benchmark finding, not hidden: the result is stored with `model × decision` attribution and no counterfactual.
+- **Copilot and Cursor are excluded.** Copilot's org policy denied access and it has no OpenRouter base-url override; Cursor is not reliably headless-routeable.
+- **GitHub OAuth login was not completed end-to-end** because no GitHub account credentials were available in the build environment. The redirect, state cookie, signed session, anonymous fallback, curator promotion, and private-task 403 were exercised.
+- **Community installs are dependency-bounded.** Registry access is allowlisted; general egress is not opened. A task requiring an unlisted registry is rejected, not run outside the sandbox.
+- **Sample data is labelled.** When the result store is unavailable, the leaderboard shows bundled seed rows with a visible `Sample data` badge.
+
+## Docs
+
+- [`docs/VISION.md`](docs/VISION.md) — problem, positioning, exclusions
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — shipped components and boundaries
+- [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) — task and scoring model
+- [`docs/ATTRIBUTION_SPEC.md`](docs/ATTRIBUTION_SPEC.md) — 5 × 4 taxonomy and rules
+- [`docs/ADAPTERS.md`](docs/ADAPTERS.md) — adapter contract and brand routing
+- [`docs/SANDBOX.md`](docs/SANDBOX.md) — sandbox and proxy budgets
+- [`docs/FRONTEND_BENCHMARK_SPEC.md`](docs/FRONTEND_BENCHMARK_SPEC.md) — UI contract
+- [`BUILD_LOG.md`](BUILD_LOG.md) — decisions and verification history
 
 ## License
 
-MIT © 2026 Orivoxx Contributors. See [`LICENSE`](LICENSE).
-
-## Acknowledgements
-
-- [Next.js](https://nextjs.org/), [React](https://react.dev/), [Tailwind CSS](https://tailwindcss.com/)
-- [Zod](https://zod.dev/), [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/)
-- [Aider](https://aider.chat/) as a benchmarked harness
-- [OpenRouter](https://openrouter.ai/) for the OpenAI-compatible model API
-- [Upstash](https://upstash.com/) for the shared result store and rate limiting
-- [ElevenLabs](https://elevenlabs.io/) for narration
+MIT. Real task repositories retain their own licenses; every curated task records its license and pins its base commit.

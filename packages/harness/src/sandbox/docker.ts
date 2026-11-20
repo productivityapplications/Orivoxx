@@ -303,7 +303,7 @@ function containerArgs(
     network === "none" ? "none" : SANDBOX_NETWORK,
     "--read-only",
     "--tmpfs",
-    `/tmp:rw,noexec,nosuid,size=${options.tmpfsSize ?? "32m"}`,
+    `/tmp:rw,noexec,nosuid,size=${options.tmpfsSize ?? "256m"}`,
     "--user",
     SANDBOX_USER,
     "--cap-drop",

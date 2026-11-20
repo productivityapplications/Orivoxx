@@ -10,6 +10,7 @@ import {
   rateLimitHeaders,
   type RateLimitOutcome,
 } from "@/server/rate-limit";
+import { runsDisabled } from "@/server/env";
 import { acquireFakeRunSlot, runFakeBenchmark } from "@/server/runs";
 import { taskDetail } from "@/server/tasks";
 
@@ -78,6 +79,15 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!contentType.toLowerCase().startsWith("application/json")) {
     return error(requestId, "invalid_content_type", "Send an application/json body.", 415);
+  }
+
+  if (runsDisabled()) {
+    return error(
+      requestId,
+      "runs_disabled",
+      "Run submission is temporarily disabled by the operator.",
+      503,
+    );
   }
 
   const outcome = await checkRunRateLimit(clientIdentifier(request));

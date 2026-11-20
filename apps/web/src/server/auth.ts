@@ -3,7 +3,6 @@ import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { cookies, headers } from "next/headers";
 
-import { getServerEnv } from "./env";
 import { hashUser } from "./community-tasks";
 
 const SESSION_COOKIE = "orivoxx_session";
@@ -90,6 +89,5 @@ export async function viewer(): Promise<Viewer> {
 export const AUTH_COOKIES = { SESSION_COOKIE, ANON_COOKIE, STATE_COOKIE, SESSION_TTL_SECONDS } as const;
 
 export function appBaseUrl(): string {
-  const env = getServerEnv();
   return (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 }

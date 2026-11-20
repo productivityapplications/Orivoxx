@@ -222,7 +222,7 @@ def main() -> int:
     )
     timed_out = False
     try:
-        stdout, stderr = process.communicate(timeout=300)
+        stdout, stderr = process.communicate(timeout=840)
     except subprocess.TimeoutExpired:
         timed_out = True
         process.kill()

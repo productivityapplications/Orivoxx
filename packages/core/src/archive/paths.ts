@@ -19,6 +19,10 @@ const EXCLUDED_DIRECTORY_NAMES = new Set([
   "vendor",
   ".turbo",
   ".pnpm-store",
+  ".pytest_cache",
+  "__pycache__",
+  ".mypy_cache",
+  ".ruff_cache",
 ]);
 
 const PRIVATE_KEY_FILE_EXTENSIONS = [".pem", ".key", ".crt", ".p12", ".pfx", ".jks"];

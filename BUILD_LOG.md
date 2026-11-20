@@ -561,3 +561,53 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - Community installs are limited to runtime-dependency-free tasks. Network-dependent installs are rejected rather than executed outside the sandbox.
 - GitHub OAuth login was not completed end-to-end because no GitHub account credentials were available; the redirect and signed-session path are implemented and the curator session was exercised directly.
 - Copilot excluded after its policy error; Cursor excluded per instructions.
+
+## 2026-11-20 — Final pass: package egress, harder tasks, attribution proof, Next.js
+
+**Proxy and package managers**
+
+- Added a CONNECT allowlist to the host-side model proxy: `registry.npmjs.org`, `registry.yarnpkg.com`, `pypi.org`, `files.pythonhosted.org`. All other CONNECT targets return 403. General egress stays closed.
+- Forwarded `anthropic-version`, `anthropic-beta`, and `openai-beta`; the proxy injects the provider key as both `Authorization` and `x-api-key`.
+- Raised the sandbox `/tmp` tmpfs to 256 MiB so npm/pip caches fit. Workspace installs persist in the bind-mounted workspace.
+- Added `pip`/`pip3` to the test-command allowlist and `HTTPS_PROXY`/`HTTP_PROXY`/npm/pip cache variables to the adapter env allowlist.
+
+**Harder real tasks**
+
+- Replaced the trivial public set with three multi-file tasks: `slugify-max-length` (index.js + index.d.ts), `is-email-predicate` (source/index.ts + source/types.ts), `itsdangerous-future-signature` (exc.py + timed.py + __init__.py).
+- Added optional `installCommand` and `.orivoxx/` acceptance fixtures to the real-task schema. The harness rewrites fixtures after the agent exits so the acceptance test cannot be weakened.
+- All three tasks validated through six gates: clone, install, test fails at base, deterministic ×3, time bounded, license. Checked times recorded in `real.ts`.
+- Reference patches were verified in scratch clones: all three tests pass after a correct fix.
+
+**Attribution proof**
+
+- Added `failing_tools` to the chaos vocabulary and a real-task Python runner with a single multi-file `apply_patch` tool call and one repair retry.
+- Run `res_c1ba8d7b435e4ae6b514138458fab8b7`: `python (chaos: failing_tools)` on `itsdangerous-future-signature`.
+  - Baseline 0.0 / test failed; attribution `harness × recovery`, rule `patch_apply_failed_unhandled`, evidence step 2.
+  - Replay retries the intercepted action, reinstalls pytest, re-runs the real test: **100.0 PASS**, 3 replayed steps.
+  - The proof is stored on the result and rendered at `/replay/res_c1ba8d7b…`.
+- Added real-task replay: reconstructs the workspace, applies the recorded action, installs declared dependencies, and runs the real test command in the sandbox. Scoring remains static.
+- Brand runs: Claude Code passed `slugify-max-length` (100.0, $0.9044). Codex failed `is-email-predicate` with a real incomplete patch (0.0, model × decision, no proof). A community `is-decimal` task passed with `python-openrouter` + `openai/gpt-5.1` (100.0, $0.0068).
+- The OpenRouter account reached its credit ceiling during the final brand runs; 402 failures were excluded rather than reported as model failures.
+
+**Security and Next.js**
+
+- Upgraded Next.js and `eslint-config-next` from 16.4.2 to 16.4.6. `pnpm --filter web build` now passes both with and without `AI_AGENT`/`AGENT`/`OPENCODE`/`OPENCODE_SESSION_ID` set.
+- Added the operator kill switch `ORIVOXX_RUNS_DISABLED=1`; mutating run and task routes return 503 before rate limiting or model work. Tested.
+- Verified no `child_process` use outside `packages/harness`; no `NEXT_PUBLIC_` secrets; OAuth/session/anonymous cookies are HttpOnly, SameSite=Lax, Secure in production; no provider keys or raw prompts in stored results.
+- Added `.pytest_cache`, `__pycache__`, `.mypy_cache`, and `.ruff_cache` to the static exclusion list.
+- Added `failing_tools` to the reliability profile schema.
+
+**Verification and docs**
+
+- Fresh-user E2E (Playwright-driven): landing → `/app` → submit community task → six gates → curator promotion → real sandboxed agent → result → leaderboard → attribution → replay. Task `is-decimal-800937e9`, result `res_2ea69a6f…`.
+- Captured 8 README screenshots with Playwright into `docs/screenshots/`.
+- Rewrote `README.md` for the final state: brand agents, real tasks, 5×4 taxonomy, community gates, quickstart, architecture, screenshots, limitations.
+- Rewrote `SUBMISSION.md` proof/agent/task/limitations sections.
+- Unit tests: core 223, benchmarks 71, results 57, replay 5, attribution 5, harness 88, web 45 (494 total; 12 Docker integration skipped by default). Typecheck and lint pass. 5 Playwright flows pass.
+- Demo video: Phase 5 pending.
+
+**Known issues**
+
+- GitHub OAuth login was not completed end-to-end (no GitHub account credentials); redirect, state, signed session, anonymous fallback, curator promotion, and private 403 were exercised.
+- Copilot remains excluded (org policy), Cursor excluded (no reliable headless OpenRouter route).
+- The existing chaos-proof diff includes pytest cache files created before capture; future runs exclude those directories.

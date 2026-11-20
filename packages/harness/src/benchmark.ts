@@ -3,6 +3,7 @@ import { evaluateRepository, type RepositoryEvaluation } from "@orivoxx/benchmar
 import {
   RunFinishedEventSchema,
   RunStartedEventSchema,
+  TRACE_LIMITS,
   deriveRunMetrics,
   type ChaosKind,
   type ChaosMetadata,
@@ -32,6 +33,7 @@ export const DEFAULT_PASS_THRESHOLD = 70;
 const CHAOS_LABELS: Record<ChaosKind, string> = {
   none: "No chaos",
   tool_error: "Injected tool error",
+  failing_tools: "Injected failing tools",
   latency: "Injected model latency",
   context_pressure: "Truncated context",
 };
@@ -107,41 +109,43 @@ export function envelopeTrace(
     0,
   );
 
-  return [
-    RunStartedEventSchema.parse({
-      type: "run_started",
-      at: run.startedAt,
-      runId: run.runId,
-      adapter: { id: run.adapter.id, version: run.adapter.version },
-      taskVersion: input.task.version,
-      rulesetVersion: input.task.rulesetVersion,
-      scoringConfigVersion: input.task.scoringConfigVersion,
-      model:
-        run.model === null
-          ? null
-          : { provider: run.model.provider, name: run.model.name },
-      startTime: run.startedAt,
-      runIndex,
-    }),
-    ...rawTrace.filter(
-      (event) => event.type !== "run_started" && event.type !== "run_finished",
-    ),
-    RunFinishedEventSchema.parse({
-      type: "run_finished",
-      at: run.completedAt,
-      endTime: run.completedAt,
-      exitReason,
-      totals: {
-        steps,
-        toolCalls,
-        promptTokens,
-        completionTokens,
-        totalTokens: promptTokens + completionTokens,
-        costUsd,
-        durationMs: run.durationMs,
-      },
-    }),
-  ];
+  const started = RunStartedEventSchema.parse({
+    type: "run_started",
+    at: run.startedAt,
+    runId: run.runId,
+    adapter: { id: run.adapter.id, version: run.adapter.version },
+    taskVersion: input.task.version,
+    rulesetVersion: input.task.rulesetVersion,
+    scoringConfigVersion: input.task.scoringConfigVersion,
+    model:
+      run.model === null
+        ? null
+        : { provider: run.model.provider, name: run.model.name },
+    startTime: run.startedAt,
+    runIndex,
+  });
+  const finished = RunFinishedEventSchema.parse({
+    type: "run_finished",
+    at: run.completedAt,
+    endTime: run.completedAt,
+    exitReason,
+    totals: {
+      steps,
+      toolCalls,
+      promptTokens,
+      completionTokens,
+      totalTokens: promptTokens + completionTokens,
+      costUsd,
+      durationMs: run.durationMs,
+    },
+  });
+  const body = rawTrace.filter(
+    (event) => event.type !== "run_started" && event.type !== "run_finished",
+  );
+  const budget = TRACE_LIMITS.maxEvents - 2;
+  const bounded = body.length > budget ? body.slice(0, budget) : body;
+
+  return [started, ...bounded, finished];
 }
 
 /**

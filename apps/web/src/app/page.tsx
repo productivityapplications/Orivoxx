@@ -317,7 +317,7 @@ export default async function LandingPage() {
           <div className="mt-5 grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
             <div>
               <h2 className="font-display text-[clamp(2.4rem,4.5vw,3.8rem)] leading-[1.02] tracking-[-0.03em]">
-                Six metrics. Three chaos modes. One reliability profile.
+                Six metrics. Four chaos modes. One reliability profile.
               </h2>
               <p className="mt-5 text-sm leading-7 text-secondary">
                 The track asks for six metrics and resilience testing. Those are the substrate.
@@ -341,9 +341,10 @@ export default async function LandingPage() {
               ))}
             </div>
           </div>
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
+          <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             {[
               ["tool_error", "One write fails with EACCES; the harness either retries or loses the file."],
+              ["failing_tools", "The real-task apply_patch is intercepted; the replay retries it."],
               ["latency", "Every model call gets a fixed delay; the stopping policy is tested."],
               ["context_pressure", "Context is truncated and the step budget shrinks; completeness is tested."],
             ].map(([kind, body]) => (

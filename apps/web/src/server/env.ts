@@ -138,3 +138,12 @@ export function getNebiusConfig(): NebiusConfig {
     modelId: env.NEBIUS_MODEL_ID,
   };
 }
+
+/**
+ * Operator kill switch for all mutating run/task submission. It is checked
+ * before rate limiting or any model work, so a budget incident can be stopped
+ * without a deploy.
+ */
+export function runsDisabled(): boolean {
+  return process.env.ORIVOXX_RUNS_DISABLED === "1";
+}

@@ -93,9 +93,20 @@ export default async function ReplayPage({ params }: { params: Promise<{ resultI
       <section className="rounded-xl border border-border-subtle bg-panel p-4">
         <h2 className="text-sm font-medium text-primary">Deterministic scoring note</h2>
         <p className="mt-2 text-xs leading-6 text-secondary">
-          Replay writes the recorded text actions into a fresh in-memory file map, applies one
-          intervention at step {divergence}, and scores with the existing engine. It makes no model
-          call and executes no produced code.
+          {result.realTask ? (
+            <>
+              Replay reconstructs the repository from the recorded starting files, applies the
+              intercepted action at step {divergence}, reinstalls the task&apos;s declared
+              dependencies, and re-runs its real test command inside the same sandbox. It makes no
+              model call. The scoring engine never executes produced code.
+            </>
+          ) : (
+            <>
+              Replay writes the recorded text actions into a fresh in-memory file map, applies one
+              intervention at step {divergence}, and scores with the existing engine. It makes no
+              model call and executes no produced code.
+            </>
+          )}
         </p>
         {attribution.candidates.length > 1 ? (
           <ul className="mt-3 space-y-1 font-mono text-[11px] text-muted">

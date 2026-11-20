@@ -53,6 +53,7 @@ export function createBrandAdapter(id: BrandAgentId): AgentAdapter {
             ANTHROPIC_BASE_URL: "http://model-proxy:8080",
             ANTHROPIC_AUTH_TOKEN: "orivoxx-sandbox-proxy",
             ANTHROPIC_API_KEY: "",
+            CLAUDE_CODE_MAX_OUTPUT_TOKENS: "8192",
             OPENAI_API_KEY: "orivoxx-sandbox-proxy",
             CODEX_HOME: "/tmp/.codex",
             TASK_ID: input.task.id,

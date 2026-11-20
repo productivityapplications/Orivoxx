@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { parseTestCommand } from "@orivoxx/harness";
 
 import { viewer } from "@/server/auth";
+import { runsDisabled } from "@/server/env";
 import {
   CreateTaskInputSchema,
   CommunityStoreError,
@@ -34,6 +35,13 @@ export async function GET(request: Request): Promise<NextResponse> {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  if (runsDisabled()) {
+    return NextResponse.json(
+      { error: { code: "runs_disabled", message: "Task submission is temporarily disabled by the operator." } },
+      { status: 503 },
+    );
+  }
+
   const current = await viewer();
   let body: unknown;
   try {

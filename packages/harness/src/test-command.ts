@@ -4,6 +4,8 @@ import { HarnessError } from "./errors.js";
 const SHELL_OPERATORS = /[|&;`\r\n]|\$\(/;
 const ALLOWED_EXECUTABLES = new Set([
   "pytest",
+  "pip",
+  "pip3",
   "python",
   "python3",
   "npm",

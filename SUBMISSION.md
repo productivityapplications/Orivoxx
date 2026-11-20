@@ -12,7 +12,7 @@ Working copy for the Devpost form. Facts below are verifiable in the repository 
 | Live app | <https://orivoxx.vercel.app> |
 | App home | <https://orivoxx.vercel.app/app> |
 | Repository | <https://github.com/productivityapplications/Orivoxx> |
-| Demo video | `demo/orivoxx-demo.mp4` (2:21) — upload to the submission host |
+| Demo video | `demo/orivoxx-demo.mp4` — final render in Phase 5; upload to the submission host |
 | License | MIT |
 
 ## Short description
@@ -21,18 +21,19 @@ Orivoxx is a framework-independent benchmark for AI software-engineering agents 
 
 ## The headline
 
-A trace shows what happened, not why. Orivoxx runs brand-name agents on real repository issues and attributes failures. Orivoxx attributes a failure to one of 20 cells — five layers (spec, model, harness, tool, environment) × four modes (decision, execution, recovery, detection) — and stores a counterfactual proof: baseline 49.7 → retry at step 2 → 98.3 PASS.
+A trace shows what happened, not why. Orivoxx runs brand-name agents on real repository issues and attributes failures. A failure maps to one of 20 cells — five layers (spec, model, harness, tool, environment) × four modes (decision, execution, recovery, detection) — and a tool fault can be proven with a counterfactual replay: baseline 0.0 → retry the intercepted `apply_patch` at step 2 → 100.0 PASS on the real test command.
 
 ## Brand agents and real tasks
 
 | Agent | OpenRouter route | Status |
 |---|---|---|
-| Claude Code 2.1.329 | Anthropic-compatible endpoint through the proxy | Runs |
-| OpenAI Codex CLI 0.171.0 | Responses wire API through the proxy | Runs |
-| Aider 0.86.2 | OpenAI-compatible proxy | Runs (baseline) |
+| Claude Code 2.1.329 | Anthropic-compatible endpoint through the proxy | Runs; passed `slugify-max-length` |
+| OpenAI Codex CLI 0.171.0 | Responses wire API through the proxy | Runs; passed legacy tasks; failed `is-email-predicate` |
+| Aider 0.86.2 | OpenAI-compatible proxy | Runs as the baseline |
 | GitHub Copilot CLI | no OpenRouter base-url override; org policy denied | Excluded |
+| Cursor | not reliably headless-routeable | Excluded |
 
-Six curated real-repository tasks (MIT, pinned base commits) replace synthetic specs as the public comparison set. All five recorded brand-agent runs pass their test command; Claude costs about $0.15/task and Codex about $0.06/task on the captured runs.
+Three harder real-repository tasks replace the trivial `is-*` one-liners as the public comparison set: `slugify-max-length` (MIT, two files), `is-email-predicate` (MIT, two files), and `itsdangerous-future-signature` (BSD-3-Clause, three files). Each pins a real base commit, installs dependencies through the allowlisted registry tunnel, and validates through six gates.
 
 ## What it does
 
@@ -41,7 +42,7 @@ Six curated real-repository tasks (MIT, pinned base commits) replace synthetic s
 3. **Six metrics.** Artifact score, steps, tool calls, tokens, cost, duration.
 4. **Three chaos modes.** Injected tool error, latency, context pressure.
 5. **Deterministic scoring.** Spec 60% / security 25% / maintainability 15%; caps at 59.9 / 49.9; no model in the loop.
-6. **Attribution.** Twelve deterministic rules over the trace; each cell has step-level evidence.
+6. **Attribution.** Seventeen deterministic rules over the trace; each cell has step-level evidence.
 7. **Replay proof.** Memoized counterfactual: byte-identical prefix, one intervention, static rescore.
 8. **Reliability profile.** Mean ± std, pass@k, layer distribution, chaos sensitivity, trend.
 9. **Public product.** Landing, app home, catalogue, result, trace, replay, leaderboard, compare, docs.
@@ -51,15 +52,16 @@ Six curated real-repository tasks (MIT, pinned base commits) replace synthetic s
 ## Real recorded proof
 
 ```text
-Result: res_64068a9c… · deepseek/deepseek-chat-v3-0324 · tool_error
-Score: 49.7 · exit failed
+Result: res_c1ba8d7b… · python (chaos: failing_tools) · anthropic/claude-sonnet-4.5
+Score: 0.0 · exit failed
 Attribution: harness × recovery
-Evidence: step 2, write_file → EACCES, no retry before exit
-Replay: intervention retry_policy at step 2, 6 replayed steps
-Counterfactual: 98.3 PASS (threshold 70)
+Rule: patch_apply_failed_unhandled
+Evidence: step 2, apply_patch → EIO (injected), no retry
+Replay: retry_policy at step 2, 3 actions re-applied
+Counterfactual: 100.0 PASS · real test command exits 0
 ```
 
-The public result page and `/replay/res_64068a9c…` show this. An earlier generated project route did not satisfy the critical marker, and its retry was stored as **insufficient (59.9)** rather than presented as proof.
+The public result page and `/replay/res_c1ba8d7b…` show this. The legacy synthetic proof `res_64068a9c…` (49.7 → 98.3) remains in the store as contract history. An earlier generated project route did not satisfy the critical marker, and its retry was stored as **insufficient (59.9)** rather than presented as proof.
 
 ## Attribution validation
 
@@ -67,6 +69,7 @@ The public result page and `/replay/res_64068a9c…` show this. An earlier gener
 - Fixture precision: 12/12 attributed runs correct.
 - Fixture recall: 12/12 labeled cells named.
 - Real-model sample: 3 tool_error runs; 1 proven sufficient, 2 rule-matched but insufficient.
+- Real chaos sample: `res_c1ba8d7b…` is a real sandbox/model run with a counterfactual that re-runs the real test command and passes.
 - Precision and recall are reported separately. Real-world recall depends on rule coverage and is not claimed as complete.
 
 ## Replay invariant
@@ -112,7 +115,7 @@ The leaderboard aggregates stored runs by adapter + task: artifact score mean ±
 
 `next.js` · `react` · `typescript` · `tailwindcss` · `zod` · `vitest` · `playwright` · `docker` · `upstash-redis` · `openrouter` · `aider` · `python` · `elevenlabs` · `ffmpeg`
 
-Community tasks are auto-validated on six mechanical gates. Promotion is curator-gated.
+Community tasks are auto-validated on six mechanical gates. Promotion is curator-gated. Private tasks return 403 to every other viewer; rate limits are 3 pending / 10 per 24h per user / 20 globally.
 
 ## Honest limitations
 
@@ -121,3 +124,6 @@ Community tasks are auto-validated on six mechanical gates. Promotion is curator
 - Attribution recall depends on rule coverage; precision and recall are reported separately.
 - Real adapter runs are organizer-executed because they require Docker and provider credentials.
 - Replay is proven for failures whose recorded actions are sufficient; some interventions remain insufficient.
+- The final brand-agent pass was cut short by the OpenRouter account credit ceiling. Runs that received 402 are excluded rather than mislabelled as model failures; completed runs and costs are reported.
+- Codex failed one multi-file task. The failure is stored and attributed to `model × decision` without a counterfactual.
+- GitHub OAuth login was not completed end-to-end; the redirect, state cookie, signed session, anonymous fallback, curator promotion, and private 403 were exercised.

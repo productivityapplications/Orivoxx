@@ -10,10 +10,11 @@ An adapter is the only place a harness choice enters a benchmark. It turns a tas
 | `claude-code-openrouter` | 1.0.0 | harness | `anthropic/claude-sonnet-4.5` | Claude Code 2.1.329 | `model-proxy` | `/opt/orivoxx/agents/brand_runner.py` |
 | `codex-openrouter` | 1.0.0 | harness | `openai/gpt-5.1-codex` | Codex CLI 0.171.0 | `model-proxy` | `/opt/orivoxx/agents/brand_runner.py` |
 | `aider-openrouter` | 1.0.0 | harness | `MODEL_NAME` | Aider 0.86.2 on Python 3.12 | `model-proxy` | `/opt/orivoxx/agents/aider_runner.py` |
+| `python-openrouter` | 1.0.0 | harness | `MODEL_NAME` | Python 3.12 standard library | `model-proxy` | `/opt/orivoxx/agents/python_openrouter.py` (synthetic) / `real_python_runner.py` (real task) |
 
 The fake adapter is the CI baseline and the self-serve public path. It never calls a model and its rows are labelled `Fake fixture (task/variant)`. The two real adapters are organizer-executed and record the model identity on every row.
 
-GitHub Copilot CLI is excluded: its org policy/auth does not expose an OpenRouter base URL. There is no OpenCode CLI adapter. The point of the benchmark is to compare harness configurations, so the harness is explicit: a hand-written agent loop and Aider.
+GitHub Copilot CLI 1.0.114 was attempted and excluded: its org policy denied access and it has no OpenRouter base-url override. Cursor is excluded because it cannot be reliably headless-routed through OpenRouter. There is no OpenCode CLI adapter. The point of the benchmark is to compare harness configurations, so the harness is explicit: brand CLIs, a hand-written agent loop, and Aider.
 
 ## 2. Common contract
 
@@ -43,9 +44,13 @@ A real adapter requires `input.network === "model-proxy"` and refuses a run boun
 
 Brand adapters receive a repo cloned at a base commit on the host, an issue file at `.orivoxx/issue.md`, and a test command held outside the agent prompt. The agent runs in the cloned workspace; after exit the harness runs the test command inside the same sandbox. `taskSuccess` is test exit 0. Claude Code uses the Anthropic-compatible OpenRouter endpoint through the proxy; Codex uses the Responses wire API through the proxy. Neither receives the real provider key.
 
+Acceptance fixtures live under `.orivoxx/` and are rewritten after the agent exits. Declared dependencies are installed through the allowlisted CONNECT tunnel before the agent starts. General egress is not opened.
+
 ## 3. `python-openrouter`
 
-A deliberately small agent loop, ~300 lines of standard-library Python. It exists so Orivoxx measures a transparent harness rather than a black box.
+A deliberately small agent loop, standard-library Python only. It exists so Orivoxx measures a transparent harness rather than a black box. On real tasks it switches to `real_python_runner.py`, which asks for one multi-file JSON patch and applies it with a single `apply_patch` tool call. On synthetic tasks it reads `PROJECT_SPEC.md`.
+
+Synthetic mode:
 
 1. Reads `PROJECT_SPEC.md` and bounded starting files from `/workspace`.
 2. Calls the model once for a JSON file plan (`{"files":["src/..."]}`).
@@ -88,7 +93,7 @@ No model slug is a product invariant. Every row records `adapter.id`, `adapter.v
 
 ## 5b. Traces and chaos
 
-Adapters emit tool and step events to `ORIVOXX_TRACE_FILE` inside the workspace; the proxy independently records model-call timing, tokens, and cost. Both are merged into the result trace. `python-openrouter` supports `ORIVOXX_CHAOS=tool_error|latency|context_pressure`; the other adapters accept the variable but do not inject faults. A chaos run is labelled in the result and used as ground truth for attribution validation.
+Adapters emit tool and step events to `ORIVOXX_TRACE_FILE` inside the workspace; the proxy independently records model-call timing, tokens, and cost. Both are merged into the result trace. `python-openrouter` supports `ORIVOXX_CHAOS=tool_error|failing_tools|latency|context_pressure`; the other adapters accept the variable but do not inject faults. `failing_tools` intercepts the single multi-file `apply_patch` call on a real task, so the recorded action can be retried by the counterfactual replay. A chaos run is labelled in the result and used as ground truth for attribution validation.
 
 ## 6. Running an adapter
 
@@ -114,6 +119,17 @@ pnpm bench:run --task taskboard --adapter python-openrouter --model deepseek/dee
 Each command appends to the configured store (Upstash when both Upstash variables are set, otherwise `.data/results`) and prints a bounded JSON summary: status, exit code, duration, score, benches, caps, tally, captured file/byte counts, and the last stdout/stderr lines. It never prints the prompt or the model response.
 
 ## 7. Recorded runs
+
+Final real-task runs (November 2026):
+
+| Adapter | Task | Test | Duration | Cost | Result |
+|---|---|---|---:|---:|---|
+| `claude-code-openrouter` | `slugify-max-length` | PASS | 232.7 s | $0.9044 | `res_85394cc5…` |
+| `python-openrouter` (`openai/gpt-5.1`) | community `is-decimal-800937e9` | PASS | 5.6 s | $0.0068 | `res_2ea69a6f…` |
+| `codex-openrouter` | `is-email-predicate` | FAIL | 492.7 s | $0.7198 | `res_e2767b1f…` |
+| `python-openrouter` (`anthropic/claude-sonnet-4.5`) | `itsdangerous-future-signature`, `chaos: failing_tools` | FAIL → proof PASS | 47.8 s | $0.1129 | `res_c1ba8d7b…` |
+
+Synthetic runs:
 
 Recorded on 15 November 2026, task `taskboard` 1.0.0, sandbox image `orivoxx/sandbox:1.0.0`, Docker with no host secrets. All three rows were appended to the shared Upstash store.
 

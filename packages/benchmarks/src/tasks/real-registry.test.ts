@@ -13,16 +13,27 @@ afterEach(async () => {
 });
 
 describe("curated real tasks", () => {
-  it("contains six permissively licensed tasks with pinned commits", () => {
-    expect(CURATED_REAL_TASKS.length).toBeGreaterThanOrEqual(5);
+  it("contains multi-file tasks with pinned commits and real installs", () => {
+    expect(CURATED_REAL_TASKS.length).toBeGreaterThanOrEqual(3);
 
     for (const task of CURATED_REAL_TASKS) {
       expect(RealTaskSchema.safeParse(task).success, task.id).toBe(true);
       expect(task.repoUrl).toMatch(/^https:\/\/github\.com\//);
       expect(task.baseCommit).toMatch(/^[a-f0-9]{40}$/);
-      expect(task.license).toBe("MIT");
+      expect(["MIT", "BSD-3-Clause", "Apache-2.0"]).toContain(task.license);
       expect(task.status).toBe("public");
-      expect(task.testCommand.startsWith("node ")).toBe(true);
+      expect(task.installCommand).toBeDefined();
+      expect(task.testFiles?.length).toBeGreaterThanOrEqual(1);
+      expect(task.difficulty).not.toBe("easy");
+    }
+  });
+
+  it("validates every acceptance path is confined to .orivoxx", () => {
+    for (const task of CURATED_REAL_TASKS) {
+      for (const file of task.testFiles ?? []) {
+        expect(file.path.startsWith(".orivoxx/"), task.id).toBe(true);
+        expect(file.path.includes(".."), task.id).toBe(false);
+      }
     }
   });
 

@@ -128,6 +128,7 @@ export const ReliabilityProfileSchema = z
       .object({
         none: z.number().min(0).max(1).optional(),
         tool_error: z.number().min(0).max(1).optional(),
+        failing_tools: z.number().min(0).max(1).optional(),
         latency: z.number().min(0).max(1).optional(),
         context_pressure: z.number().min(0).max(1).optional(),
       })

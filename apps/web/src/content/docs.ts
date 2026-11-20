@@ -183,7 +183,7 @@ export const DOC_SECTIONS: DocSection[] = [
       { type: "list", items: ["Spec — contradictory, ambiguous, or underspecified task", "Model — wrong reasoning, ignored instruction, hallucinated API", "Harness — swallowed error, no retry, bad stopping condition, dropped state", "Tool — wrong result or the tool's own failure", "Environment — network, timeout, quota, or external nondeterminism"] },
       { type: "h2", text: "Modes" },
       { type: "list", items: ["Decision — wrong choice among viable options", "Execution — correct choice, failed to execute", "Recovery — should have recovered from a fault, did not", "Detection — should have noticed an inconsistency, did not"] },
-      { type: "p", text: "Twenty cells. Twelve rules ship today, including tool_error_unhandled (harness × recovery), step_limit_hit (harness × execution), hallucinated_api (model × decision), and misleading_spec_followed (spec × detection). A rule that matches without a counterfactual is medium confidence and is never presented as proven." },
+      { type: "p", text: "Twenty cells. Seventeen rules ship today, including patch_apply_failed_unhandled (harness × recovery), test_failed_after_patch (model × decision), test_run_skipped (harness × execution), hallucinated_api (model × decision), and misleading_spec_followed (spec × detection). A rule that matches without a counterfactual is medium confidence and is never presented as proven." },
     ],
   },
   {
@@ -217,9 +217,9 @@ export const DOC_SECTIONS: DocSection[] = [
   {
     slug: "resilience",
     title: "Resilience testing",
-    summary: "Three chaos modes and what each one tests.",
+    summary: "Four chaos modes and what each one tests.",
     blocks: [
-      { type: "list", items: ["tool_error — one write fails with EACCES; tests recovery and retry policy", "latency — every model call is delayed; tests the stopping policy and budget guards", "context_pressure — context is truncated and the step budget shrinks; tests completeness and detection"] },
+      { type: "list", items: ["tool_error — one write fails with EACCES; tests recovery and retry policy", "failing_tools — the real-task apply_patch call is intercepted; the replay retries it and re-runs the real test", "latency — every model call is delayed; tests the stopping policy and budget guards", "context_pressure — context is truncated and the step budget shrinks; tests completeness and detection"] },
       { type: "p", text: "Chaos injections are labelled ground truth. The attribution engine is measured against those labels; precision (the proof crosses the threshold) and recall (the expected cell is named) are reported separately in the build log." },
     ],
   },

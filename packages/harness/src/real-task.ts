@@ -95,7 +95,11 @@ export function buildRealRunInput(
   task: RealTask,
   startingFiles: readonly ProjectFile[],
   adapter: AgentAdapter,
-  options: { timeLimitSeconds?: number; maxSteps?: number } = {},
+  options: {
+    timeLimitSeconds?: number;
+    maxSteps?: number;
+    chaos?: AdapterRunInput["chaos"];
+  } = {},
 ): AdapterRunInput {
   return {
     schemaVersion: "1.0.0",
@@ -119,7 +123,7 @@ export function buildRealRunInput(
     },
     network: "model-proxy",
     model: adapter.model,
-    chaos: "none",
+    chaos: options.chaos ?? "none",
   };
 }
 

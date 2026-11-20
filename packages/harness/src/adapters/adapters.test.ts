@@ -9,7 +9,11 @@ import { getTask } from "@orivoxx/benchmarks";
 import { describe, expect, it } from "vitest";
 
 import { createAiderOpenRouterAdapter, AIDER_RUNNER_SCRIPT } from "./aider.js";
-import { createPythonOpenRouterAdapter, AGENT_SCRIPT } from "./python.js";
+import {
+  createPythonOpenRouterAdapter,
+  AGENT_SCRIPT,
+  REAL_AGENT_SCRIPT,
+} from "./python.js";
 import { adapterSummaries, getAdapter, listAdapters } from "./registry.js";
 
 function runInput(adapter: AgentAdapter, overrides: Partial<AdapterRunInput> = {}): AdapterRunInput {
@@ -48,9 +52,24 @@ describe("python-openrouter adapter", () => {
       MAX_STEPS: "40",
       TASK_ID: "taskboard",
       ORIVOXX_CHAOS: "none",
+      ISSUE_PATH: "/workspace/.orivoxx/issue.md",
       PYTHONUNBUFFERED: "1",
     });
     expect(JSON.stringify(command)).not.toMatch(/sk-or-v1-/);
+  });
+
+  it("uses the real-repository runner when an issue file is present", () => {
+    const adapter = createPythonOpenRouterAdapter({ modelName: "openai/gpt-4o-mini" });
+    const plan = adapter.plan(
+      runInput(adapter, {
+        startingFiles: [{ path: ".orivoxx/issue.md", content: "# Issue" }],
+      }),
+    );
+
+    expect(plan.kind).toBe("process");
+    if (plan.kind === "process") {
+      expect(plan.command.args).toEqual([REAL_AGENT_SCRIPT]);
+    }
   });
 
   it("records a different model when asked for the demo second model", () => {

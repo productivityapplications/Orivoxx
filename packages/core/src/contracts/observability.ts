@@ -19,6 +19,7 @@ export type ExitReason = z.infer<typeof ExitReasonSchema>;
 export const ChaosKindSchema = z.enum([
   "none",
   "tool_error",
+  "failing_tools",
   "latency",
   "context_pressure",
 ]);

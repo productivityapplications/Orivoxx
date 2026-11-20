@@ -4,15 +4,12 @@ import Link from "next/link";
 import { CURATED_REAL_TASKS } from "@orivoxx/benchmarks";
 
 import { StatusChip } from "@/components/status-chip";
-import { viewer } from "@/server/auth";
-import { listPublicCommunityTasks, listUserTasks } from "@/server/community-tasks";
+import { listPublicCommunityTasks } from "@/server/community-tasks";
 
 export const metadata: Metadata = { title: "Tasks" };
 export const dynamic = "force-dynamic";
 
 export default async function TasksPage() {
-  const current = await viewer();
-  const mine = await listUserTasks(current.id).catch(() => []);
   const community = await listPublicCommunityTasks().catch(() => []);
 
   return (

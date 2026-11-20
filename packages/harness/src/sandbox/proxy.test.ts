@@ -274,6 +274,7 @@ describe("model proxy credentials", () => {
         cookie: "session=secret",
         "x-forwarded-for": "10.0.0.9",
         "x-api-key": "leak",
+        "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
       body: "{}",
@@ -283,7 +284,9 @@ describe("model proxy credentials", () => {
 
     expect(headers?.cookie).toBeUndefined();
     expect(headers?.["x-forwarded-for"]).toBeUndefined();
-    expect(headers?.["x-api-key"]).toBeUndefined();
+    // The proxy replaces a client-supplied key with the server-held provider key.
+    expect(headers?.["x-api-key"]).toBe("test-provider-key");
+    expect(headers?.["anthropic-version"]).toBe("2023-06-01");
     expect(headers?.host).toBe(new URL(upstream.url).host);
   });
 });

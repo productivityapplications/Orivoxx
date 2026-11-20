@@ -98,6 +98,15 @@ describe("POST /api/v1/runs", () => {
     expect((await tooLarge.json()).error.code).toBe("body_too_large");
   });
 
+  it("fails closed when the operator kill switch is on", async () => {
+    vi.stubEnv("ORIVOXX_RUNS_DISABLED", "1");
+
+    const response = await runsRoute(runRequest({ taskId: "taskboard", variant: "compliant" }));
+
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("runs_disabled");
+  });
+
   it("rejects a foreign origin and a missing origin", async () => {
     const foreign = await runsRoute(
       runRequest({ taskId: "taskboard", variant: "compliant" }, "application/json", {

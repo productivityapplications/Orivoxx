@@ -31,6 +31,8 @@ import {
   writeProjectFiles,
 } from "./workspace.js";
 
+const SANDBOX_PACKAGE_PROXY = "http://model-proxy:8080";
+
 const ANSI_ESCAPE_PATTERN = /\u001b\[[0-9;?]*[A-Za-z]/g;
 
 function summarizeStream(raw: string): string {
@@ -218,6 +220,11 @@ export interface RunAdapterOptions {
   now?: () => Date;
   testCommand?: string;
   testTimeoutMs?: number;
+  /** Acceptance fixtures re-written after the agent and before the test. */
+  testFiles?: readonly { path: string; content: string }[];
+  /** Dependency install commands run once before the agent starts. */
+  installCommands?: readonly string[];
+  installTimeoutMs?: number;
 }
 
 function parseInput(input: AdapterRunInput): AdapterRunInput {
@@ -258,6 +265,10 @@ export async function runAdapterDetailed(
   await assertEmptyDirectory(options.workspace);
   await writeProjectFiles(options.workspace, input.startingFiles);
 
+  if (options.testFiles !== undefined && options.testFiles.length > 0) {
+    await writeProjectFiles(options.workspace, options.testFiles, { overwrite: true });
+  }
+
   const plan = options.adapter.plan(input);
   const startedAt = now();
   const startedMs = Date.now();
@@ -282,6 +293,25 @@ export async function runAdapterDetailed(
       );
     }
 
+    for (const installCommand of options.installCommands ?? []) {
+      const parsedInstall = parseTestCommand(installCommand);
+      await executor.execute({
+        command: AgentCommandSchema.parse({
+          ...parsedInstall,
+          env: {
+            HTTPS_PROXY: SANDBOX_PACKAGE_PROXY,
+            HTTP_PROXY: SANDBOX_PACKAGE_PROXY,
+            PIP_DISABLE_PIP_VERSION_CHECK: "1",
+            NPM_CONFIG_AUDIT: "false",
+            NPM_CONFIG_FUND: "false",
+          },
+        }),
+        workspace: options.workspace,
+        timeoutMs: options.installTimeoutMs ?? 300_000,
+        maxOutputBytes: Math.min(input.limits.maxOutputBytes, 1_048_576),
+      });
+    }
+
     const command = AgentCommandSchema.parse(plan.command);
     const result = await executor.execute({
       command,
@@ -302,6 +332,10 @@ export async function runAdapterDetailed(
     }
 
     if (options.testCommand !== undefined && options.testCommand.length > 0) {
+      if (options.testFiles !== undefined && options.testFiles.length > 0) {
+        await writeProjectFiles(options.workspace, options.testFiles, { overwrite: true });
+      }
+
       const testCommand = parseTestCommand(options.testCommand);
       const testResult = await executor.execute({
         command: testCommand,
