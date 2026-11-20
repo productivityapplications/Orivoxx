@@ -3,7 +3,7 @@
 **Benchmark the agent, not just the model.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.4.6-black?style=flat-square)](https://nextjs.org/)
-[![tests](https://img.shields.io/badge/tests-494%20passing-17CF97?style=flat-square)](#quickstart)
+[![tests](https://img.shields.io/badge/tests-495%20passing-17CF97?style=flat-square)](#quickstart)
 [![score](https://img.shields.io/badge/score-deterministic-17CF97?style=flat-square)](#failure-attribution--replay)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
@@ -158,7 +158,7 @@ Verify the repository:
 ```bash
 pnpm -r typecheck
 pnpm -r lint
-pnpm -r test                # 494 unit tests; Docker integration is opt-in
+pnpm -r test                # 495 unit tests; Docker integration is opt-in
 pnpm test:e2e               # 5 Playwright flows against a throwaway local store
 ```
 

@@ -682,3 +682,9 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - Re-recorded all 8 scenes with Playwright at 1920×1080 against the local production build with the new task catalogue. Reassembled with ASS karaoke captions, cross-dissolves, and the original ambient bed.
 - Final: `demo/orivoxx-demo.mp4`, 134.7s (2:14.7), H.264/AAC 1920×1080/30, −16.2 LUFS integrated, −1.6 dBTP true peak, 0 caption overlaps, 8.9 MiB.
 - Updated `demo/README.md` and `demo/thumbnail.{png,jpg}`.
+
+**Final count after the catalogue regression test**
+
+- 495 unit tests: core 223, benchmarks 71, results 57, attribution 5, replay 5, harness 88, web 46.
+- Live catalogue verified after the final deploy: `/api/v1/tasks` returns `real:is-email-predicate`, `real:itsdangerous-future-signature`, `real:slugify-max-length`; `/`, `/app`, `/tasks`, `/benchmarks`, and `/leaderboard` each contain all three.
+- Final video re-rendered after the quick-start copy was aligned to `0.0 → 100.0`: 134.7s, −16.2 LUFS, −1.6 dBTP, 0 caption overlaps.
