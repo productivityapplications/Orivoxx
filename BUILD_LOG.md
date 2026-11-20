@@ -660,3 +660,25 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 **Claude Code on the fresh community task**
 
 - Extended the brand adapter with an optional model override and a truthful label. Claude Code 2.1.329 + `anthropic/claude-haiku-5.5` ran the fresh community task `is-decimal-800937e9` in 11.8s for **$0.0015** and passed at 100.0 (`res_74101d58…`). This completes the E2E requirement to run Claude Code against the newly validated task without using the exhausted Sonnet budget.
+
+## 2026-11-20 — Live catalogue fix and final demo video
+
+**Phase 1: missing real tasks**
+
+- Root cause: the curated real tasks existed in `packages/benchmarks/src/tasks/real.ts`, but `taskSummaries()` only called the synthetic `listTasks()` registry. The web `/tasks` page imported `CURATED_REAL_TASKS` directly, while `/api/v1/tasks`, `/app`, `/benchmarks`, and the landing page used the synthetic-only summaries.
+- Fixed `apps/web/src/server/tasks.ts` to merge the three curated real tasks (`kind: "real"`, repo, language, license) with the synthetic tasks. `TaskCard` and the app home now link real tasks to `/tasks/:id`; `/benchmarks` shows both families.
+- Added real-task assertions to the task API test. `/api/v1/tasks` now returns all five tasks, with the real three first.
+- Added a real-task strip to the landing page and changed the hero proof selection to prefer a real-task proof.
+- Deployed `6565664` / latest. Live proof:
+  - https://orivoxx.vercel.app/tasks/slugify-max-length
+  - https://orivoxx.vercel.app/tasks/is-email-predicate
+  - https://orivoxx.vercel.app/tasks/itsdangerous-future-signature
+- Verified live `/api/v1/tasks`, `/`, `/app`, `/tasks`, `/benchmarks`, and `/leaderboard` all render the tasks.
+
+**Phase 2: final demo video**
+
+- ElevenLabs test render: HTTP 200 with the premade `SOYHLrjzK2X1ezoPC6cr` (“Harry”) voice. The `.env.local` library voice returns HTTP 402 on this plan, so the render overrides it to the premade voice. The single-scene test file was deleted after verification.
+- Updated `demo/SCRIPT.md` and `demo/scripts/narration.mjs` to the final story: Problem, Solution, Six Metrics + four chaos modes, real tasks/Claude run, `harness × recovery`, 0.0 → 100.0 replay proof, community tasks/six gates, close.
+- Re-recorded all 8 scenes with Playwright at 1920×1080 against the local production build with the new task catalogue. Reassembled with ASS karaoke captions, cross-dissolves, and the original ambient bed.
+- Final: `demo/orivoxx-demo.mp4`, 134.7s (2:14.7), H.264/AAC 1920×1080/30, −16.2 LUFS integrated, −1.6 dBTP true peak, 0 caption overlaps, 8.9 MiB.
+- Updated `demo/README.md` and `demo/thumbnail.{png,jpg}`.

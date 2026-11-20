@@ -1,6 +1,6 @@
 # Orivoxx demo video
 
-`demo/orivoxx-demo.mp4` — 2:21.5, 1920 × 1080, 30 fps, H.264/AAC, −15.9 LUFS, true peak −1.5 dBTP.
+`demo/orivoxx-demo.mp4` — 2:14.7, 1920 × 1080, 30 fps, H.264/AAC, −16.2 LUFS, true peak −1.6 dBTP.
 
 ![thumbnail](thumbnail.jpg)
 
@@ -14,7 +14,7 @@
 | `REFERENCE_NOTES.md` | Measured study of the organizer reference |
 | `audio/scene-*.mp3` | ElevenLabs narration used in the cut |
 | `audio/scene-*.timestamps.json` | ElevenLabs character alignment used for word-synced captions |
-| `audio/test-scene-01.mp3` | Required single-scene ElevenLabs test render |
+| `audio/scene-*.mp3` | ElevenLabs narration (single-scene test render succeeded and was removed) |
 | `recordings/scene-*.webm` | Raw Playwright screen recordings (gitignored) |
 | `build/` | Segments, ASS captions, music bed (gitignored) |
 | `scripts/` | Audio generation, recording, assembly |
@@ -24,7 +24,8 @@
 - Provider: **ElevenLabs**
 - Model: `eleven_multilingual_v2`
 - Voice: `SOYHLrjzK2X1ezoPC6cr` (“Harry”, premade)
-- Test render: `audio/test-scene-01.mp3` (19.25s, mean −23.1 dB, peak −5.2 dB) before the full render.
+- The `.env.local` voice id points at a library voice that the current plan blocks with HTTP 402; the render overrides it to the premade Harry voice.
+- Test render: Scene 1 returned HTTP 200 and a valid MP3 + alignment; it was removed after verification.
 - The full render used `with-timestamps` so captions highlight the spoken word instead of guessing timing.
 
 No Piper fallback was used in the shipped cut. If ElevenLabs fails, `generate-piper-audio.mjs` and the old Piper WAVs under `audio/piper/` remain available, but the assembler expects MP3 + timestamp files; swapping voices is a deliberate step, never silent.
@@ -46,11 +47,11 @@ node demo/scripts/assemble.mjs
 
 1. The problem: a trace shows what happened, not why.
 2. The solution: deterministic score + counterfactual attribution.
-3. Six metrics, three chaos modes, reliability profile.
-4. A real 96.4 result: scorecard, metrics, trace.
-5. A real 49.7 failure attributed to `harness × recovery`.
-6. Replay proof: 49.7 → 98.3, intervention at step 2.
-7. Leaderboard reliability bars and comparison.
+3. Six metrics and four chaos modes, including `failing_tools`.
+4. Real tasks: `slugify-max-length`, `is-email-predicate`, `itsdangerous-future-signature`; a Claude Code run at 100.0.
+5. The chaos failure on `itsdangerous-future-signature` attributed to `harness × recovery`.
+6. Replay proof: 0.0 → 100.0, retry at step 2, real test re-run.
+7. Community submission, six validation gates, curator promotion.
 8. Tagline and URL.
 
 ## Reference application
@@ -72,9 +73,9 @@ Deliberately different: dark UI (not white cards on green), real product chrome 
 |---|---|
 | Container | MP4, H.264 + AAC |
 | Resolution / fps | 1920 × 1080 / 30 |
-| Duration | 141.5 s (limit 180 s) |
-| Integrated loudness | −15.9 LUFS |
-| True peak | −1.5 dBTP |
+| Duration | 134.7 s (limit 180 s) |
+| Integrated loudness | −16.2 LUFS |
+| True peak | −1.6 dBTP |
 | Caption overlap | none (ASS lines are non-overlapping) |
 | Narration per scene | 8/8 |
 | Visuals | real Playwright recordings only |

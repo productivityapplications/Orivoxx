@@ -1,5 +1,5 @@
 /**
- * Narration and scene metadata for the Orivoxx attribution demo.
+ * Narration and scene metadata for the final Orivoxx demo.
  * Audio is rendered with ElevenLabs; word timings come from the alignment API.
  */
 export const SCENES = [
@@ -7,43 +7,43 @@ export const SCENES = [
     id: "01",
     title: "The problem",
     file: "scene-01.mp3",
-    text: "Forty-seven steps. One failed artifact. The trace shows every hand-off, but it does not say which layer broke. Was it the model, the harness, a tool, or the specification itself? Orivoxx answers that with a deterministic benchmark and a counterfactual proof.",
+    text: "An agent fails. The trace lists forty-seven steps, but not the reason. Was it the model, the harness, a tool, or the specification? Orivoxx answers with a deterministic benchmark and a counterfactual proof.",
   },
   {
     id: "02",
     title: "The solution",
     file: "scene-02.mp3",
-    text: "Orivoxx benchmarks the whole agent configuration. A versioned task, a sandboxed run, and a static score with no model in the loop. Then it attributes the failure to one of twenty layer and mode cells, and proves the attribution with a replay.",
+    text: "Orivoxx benchmarks the whole agent configuration: a real repository task, a sandboxed run, and a static score with no model in the loop. Then it names the failure by layer and mode, and proves the diagnosis with a replay.",
   },
   {
     id: "03",
     title: "What it measures",
     file: "scene-03.mp3",
-    text: "Six metrics: artifact score, steps, tool calls, tokens, cost, and duration. Three chaos modes: tool errors, latency, and context pressure. Across runs, those become a reliability profile: pass at k, score spread, and the layer distribution behind every failure.",
+    text: "Six metrics: steps, tool calls, tool errors, tokens, cost, and duration. Four chaos modes: injected tool errors, failing tools, latency, and context pressure. Across runs they become a reliability profile, not one lucky score.",
   },
   {
     id: "04",
-    title: "One run",
+    title: "A real run",
     file: "scene-04.mp3",
-    text: "One task, one agent, one model. The agent runs in Docker, with no platform secrets and no internet route. Every model call passes through one allowlisted proxy. The harness records the trace, captures the repository, and scores it statically.",
+    text: "Claude Code runs a real issue from the slugify repository. It edits the runtime and the type declaration. The test command stays hidden. The harness captures the trace, runs the real test inside the sandbox, and the result passes at one hundred.",
   },
   {
     id: "05",
     title: "Attribution",
     file: "scene-05.mp3",
-    text: "This run fails at forty-nine point seven. The attribution says harness, recovery. Evidence: step two, a write fails with EACCES, and the harness never retries. No guessed root cause. One cell, one rule, one recorded step.",
+    text: "The chaos run fails at zero. The attribution says harness, recovery. Evidence: step two, the multi-file apply_patch is intercepted, and the harness never retries. One cell, one rule, one recorded step.",
   },
   {
     id: "06",
-    title: "Replay",
+    title: "Replay proof",
     file: "scene-06.mp3",
-    text: "The proof is a replay. Steps before the intervention are byte-identical. At step two, we retry the failed write. The remaining actions replay from the record, and the same deterministic engine scores ninety-eight point three. No model call.",
+    text: "The proof is a replay. The workspace is reconstructed, the intercepted action is applied, dependencies are reinstalled, and the real test command runs again. Zero becomes one hundred. No model call enters the score.",
   },
   {
     id: "07",
-    title: "Reliability",
+    title: "Community tasks",
     file: "scene-07.mp3",
-    text: "Across runs, the leaderboard shows the reliability profile, not a single lucky score. The stacked bar is the layer distribution behind the failures. Compare two agents and the attribution diff shows which layer keeps breaking.",
+    text: "Anyone can submit a real task. Six mechanical gates run in the same sandbox: clone, install, test fails at base, deterministic times three, time bounded, and license. A curator promotes it. Private tasks stay private.",
   },
   {
     id: "08",
@@ -54,4 +54,4 @@ export const SCENES = [
 ];
 
 export const HOLD_SECONDS = 0.45;
-export const VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "SOYHLrjzK2X1ezoPC6cr";
+export const VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "7jynqzOvnVP89nA7TB0m";

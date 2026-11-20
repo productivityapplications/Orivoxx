@@ -12,7 +12,7 @@ Working copy for the Devpost form. Facts below are verifiable in the repository 
 | Live app | <https://orivoxx.vercel.app> |
 | App home | <https://orivoxx.vercel.app/app> |
 | Repository | <https://github.com/productivityapplications/Orivoxx> |
-| Demo video | `demo/orivoxx-demo.mp4` (2:21) — pre-final cut; re-record blocked by ElevenLabs 401 `missing_permissions` (`text_to_speech`) |
+| Demo video | `demo/orivoxx-demo.mp4` (2:14.7) — final cut, 1920×1080, −16.2 LUFS, −1.6 dBTP, showing the new real tasks and the 0.0 → 100.0 replay proof |
 | License | MIT |
 
 ## Short description

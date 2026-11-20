@@ -14,8 +14,9 @@ import { createRequire } from "node:module";
 
 import { SCENES } from "./narration.mjs";
 
-const ATTRIBUTED_ID = "res_64068a9c11d744aa8c0391efa0bc04a4";
-const BASELINE_ID = "res_df4fc568db41468ba499223509bcdd7e";
+const PROOF_ID = "res_c1ba8d7b435e4ae6b514138458fab8b7";
+const CLAUDE_ID = "res_85394cc5a29a4c89b0f7613e229ebd99";
+const COMMUNITY_TASK = "is-decimal-800937e9";
 
 const requireFromWeb = createRequire(
   new URL("../../apps/web/package.json", import.meta.url),
@@ -49,32 +50,12 @@ async function durationOf(file) {
   return Number.parseFloat(stdout.trim());
 }
 
-const leaderboard = await fetch(`${base}/api/v1/leaderboard?limit=100`).then((response) =>
-  response.json(),
-);
-const all = await fetch(`${base}/api/v1/leaderboard?limit=100&kind=all`).then((response) =>
+const board = await fetch(`${base}/api/v1/leaderboard?limit=100&kind=all`).then((response) =>
   response.json(),
 );
 
-const pythonResult =
-  leaderboard.entries?.find(
-    (entry) =>
-      entry.adapter.id === "python-openrouter" && entry.model?.name === "openai/gpt-4o-mini",
-  ) ?? leaderboard.entries?.[0];
-const cappedResult =
-  all.entries?.find(
-    (entry) =>
-      entry.taskId === "taskboard" &&
-      entry.adapter.id === "fake" &&
-      entry.capsApplied?.length > 0,
-  ) ??
-  all.entries?.find(
-    (entry) => entry.taskId === "taskboard" && entry.capsApplied?.length > 0,
-  ) ??
-  all.entries?.find((entry) => entry.capsApplied?.length > 0);
-
-if (pythonResult === undefined || cappedResult === undefined) {
-  throw new Error("The store does not have the results needed for the demo.");
+if (!board.entries?.some((entry) => entry.resultId === PROOF_ID)) {
+  throw new Error("The stored chaos proof is missing; refusing to record an empty proof scene.");
 }
 
 const browser = await chromium.launch();
@@ -115,14 +96,39 @@ async function record(scene, perform) {
 async function open(page, path) {
   await page.goto(`${base}${path}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(450);
 }
 
-async function scrollBy(page, pixels, steps = 24) {
-  for (let index = 0; index < steps; index += 1) {
-    await page.mouse.wheel(0, pixels / steps);
-    await page.waitForTimeout(28);
-  }
+async function scrollToHeading(page, text, offset = 0) {
+  await page.evaluate(
+    ({ text: needle, offset: delta }) => {
+      const heading = [...document.querySelectorAll("h1, h2, h3")].find((element) =>
+        element.textContent?.toLowerCase().includes(needle.toLowerCase()),
+      );
+
+      if (heading != null) {
+        const top = heading.getBoundingClientRect().top + window.scrollY - 140 + delta;
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      }
+    },
+    { text, offset },
+  );
+  await page.waitForTimeout(900);
+}
+
+async function fillTaskForm(page) {
+  await page.locator('input[name="title"]').fill("Community: is-decimal guard");
+  await page.locator('input[name="repoUrl"]').fill("https://github.com/wooorm/is-decimal");
+  await page.locator('input[name="baseCommit"]').fill("edc9aaf05e07857a03654115cf5ae8bf9eb74b95");
+  await page
+    .locator('textarea[name="issueText"]')
+    .fill(
+      "isDecimal('12') currently returns true because the implementation reads only the first code point. The API documents a single character or code point. Make multi-character strings return false without changing behavior for numbers or one-character strings.",
+    );
+  await page
+    .locator('input[name="testCommand"]')
+    .fill(`node -e "import('./index.js').then(({isDecimal})=>process.exit(isDecimal('12')?1:0))"`);
+  await page.waitForTimeout(900);
 }
 
 for (const scene of SCENES) {
@@ -134,74 +140,70 @@ for (const scene of SCENES) {
     switch (scene.id) {
       case "01": {
         await open(page, "/");
-        await page.waitForTimeout(seconds * 150);
-        await page.mouse.wheel(0, 760);
-        await page.waitForTimeout(seconds * 120);
-        await page.mouse.wheel(0, 900);
-        await page.waitForTimeout(seconds * 90);
+        await page.waitForTimeout(seconds * 180);
+        await scrollToHeading(page, "A trace tells you what happened");
+        await page.waitForTimeout(seconds * 160);
         break;
       }
       case "02": {
-        await open(page, "/");
-        await page.waitForTimeout(seconds * 120);
-        await page.mouse.wheel(0, 1900);
+        await open(page, "/app");
         await page.waitForTimeout(seconds * 150);
-        await page.mouse.wheel(0, 700);
-        await page.waitForTimeout(seconds * 100);
+        await scrollToHeading(page, "One intervention");
+        await page.waitForTimeout(seconds * 160);
         break;
       }
       case "03": {
-        await open(page, "/");
+        await open(page, "/app");
         await page.waitForTimeout(seconds * 100);
-        await page.mouse.wheel(0, 3000);
-        await page.waitForTimeout(seconds * 180);
-        await page.mouse.wheel(0, 700);
-        await page.waitForTimeout(seconds * 100);
+        await scrollToHeading(page, "Six metrics");
+        await page.waitForTimeout(seconds * 120);
+        await scrollToHeading(page, "Inject the fault");
+        await page.waitForTimeout(seconds * 120);
         break;
       }
       case "04": {
-        await open(page, `/results/${BASELINE_ID}`);
-        await page.waitForTimeout(seconds * 150);
-        await page.mouse.wheel(0, 560);
-        await page.waitForTimeout(seconds * 130);
-        await page.mouse.wheel(0, 500);
+        await open(page, "/tasks");
+        await page.waitForTimeout(seconds * 140);
+        await open(page, "/tasks/slugify-max-length");
+        await page.waitForTimeout(seconds * 110);
+        await open(page, `/results/${CLAUDE_ID}`);
         await page.waitForTimeout(seconds * 120);
+        await scrollToHeading(page, "Repository task");
+        await page.waitForTimeout(seconds * 90);
         break;
       }
       case "05": {
-        await open(page, `/results/${ATTRIBUTED_ID}`);
+        await open(page, `/results/${PROOF_ID}`);
         await page.waitForTimeout(seconds * 130);
-        await page.mouse.wheel(0, 720);
-        await page.waitForTimeout(seconds * 150);
-        await page.mouse.wheel(0, 220);
-        await page.waitForTimeout(seconds * 100);
+        await scrollToHeading(page, "harness");
+        await page.waitForTimeout(seconds * 160);
         break;
       }
       case "06": {
-        await open(page, `/replay/${ATTRIBUTED_ID}`);
+        await open(page, `/replay/${PROOF_ID}`);
         await page.waitForTimeout(seconds * 170);
         await page.mouse.wheel(0, 520);
-        await page.waitForTimeout(seconds * 120);
-        await page.mouse.wheel(0, 600);
-        await page.waitForTimeout(seconds * 100);
+        await page.waitForTimeout(seconds * 130);
         break;
       }
       case "07": {
-        await open(page, "/leaderboard");
-        await page.waitForTimeout(seconds * 160);
-        await page.mouse.wheel(0, 420);
+        await open(page, "/tasks/new");
         await page.waitForTimeout(seconds * 90);
-        await open(page, `/compare?task=taskboard&a=${BASELINE_ID}&b=${ATTRIBUTED_ID}`);
-        await page.waitForTimeout(seconds * 200);
+        await fillTaskForm(page);
+        await page.waitForTimeout(seconds * 90);
+        await open(page, `/tasks/${COMMUNITY_TASK}`);
+        await page.waitForTimeout(seconds * 120);
+        await scrollToHeading(page, "Six gates");
+        await page.waitForTimeout(seconds * 130);
         break;
       }
       case "08": {
         await open(page, "/app");
-        await page.waitForTimeout(seconds * 180);
-        await page.mouse.wheel(0, 760);
+        await page.waitForTimeout(seconds * 130);
+        await page.mouse.wheel(0, 920);
         await page.waitForTimeout(seconds * 100);
         await open(page, "/");
-        await page.waitForTimeout(seconds * 170);
+        await page.waitForTimeout(seconds * 160);
         break;
       }
       default:

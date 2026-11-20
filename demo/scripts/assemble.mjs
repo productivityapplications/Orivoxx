@@ -111,22 +111,35 @@ function buildAss(scene, words, target) {
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
   ];
 
-  for (const phrase of phraseGroups(words)) {
-    const start = Math.max(0, phrase[0].start - 0.08);
-    const end = Math.min(target, phrase[phrase.length - 1].end + 0.22);
+  const groups = phraseGroups(words);
+  let previousEnd = 0;
+
+  for (let phraseIndex = 0; phraseIndex < groups.length; phraseIndex += 1) {
+    const phrase = groups[phraseIndex];
+    const nextPhrase = groups[phraseIndex + 1];
+    const start = Math.max(previousEnd + 0.01, phrase[0].start - 0.08);
+    const nextStart = nextPhrase?.[0]?.start ?? target;
+    const end = Math.min(target, phrase[phrase.length - 1].end + 0.22, nextStart - 0.01);
+
+    if (end <= start + 0.05) {
+      previousEnd = Math.max(previousEnd, end);
+      continue;
+    }
+
     const parts = [];
 
     for (let index = 0; index < phrase.length; index += 1) {
       const word = phrase[index];
       const next = phrase[index + 1];
-      const nextStart = next === undefined ? end : next.start;
-      const centiseconds = Math.max(1, Math.round((nextStart - word.start) * 100));
+      const wordEnd = next === undefined ? end : next.start;
+      const centiseconds = Math.max(1, Math.round((wordEnd - word.start) * 100));
       parts.push(`{\\k${centiseconds}}${word.word}${index < phrase.length - 1 ? " " : ""}`);
     }
 
     lines.push(
       `Dialogue: 0,${assTime(start)},${assTime(end)},Caption,,0,0,0,,${parts.join("")}`,
     );
+    previousEnd = end;
   }
 
   return lines.join("\n");
