@@ -141,6 +141,7 @@ git clone https://github.com/productivityapplications/Orivoxx.git
 cd Orivoxx
 corepack enable
 pnpm install --frozen-lockfile
+pnpm -r build                # workspace packages first; the web app imports their dist
 cp .env.example .env.local   # add OPENROUTER_API_KEY for real agent runs
 ```
 
