@@ -7,3 +7,6 @@ export * from "./errors.js";
 export * from "./run.js";
 export * from "./sandbox/index.js";
 export * from "./workspace.js";
+export * from "./real-benchmark.js";
+export * from "./real-task.js";
+export * from "./test-command.js";

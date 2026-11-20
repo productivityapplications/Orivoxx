@@ -1,6 +1,8 @@
 export const HARNESS_ERROR_CODES = [
   "invalid_run_input",
   "invalid_run_output",
+  "invalid_test_command",
+  "invalid_real_task",
   "invalid_workspace",
   "workspace_not_empty",
   "unsafe_path",

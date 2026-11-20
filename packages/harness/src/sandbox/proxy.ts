@@ -279,7 +279,7 @@ function handleRequest(
           responseChunks.push(chunk);
         });
 
-        upstreamResponse.on("end", () => {
+        upstreamResponse.on("end", async () => {
           if (failed) {
             return;
           }
@@ -290,30 +290,92 @@ function handleRequest(
           let costUsd = 0;
           let finishReason = "unknown";
 
+          const rawPayload = payload.toString("utf8");
+
+          const readUsage = (value: unknown): void => {
+            if (value === null || typeof value !== "object") return;
+            const record = value as Record<string, unknown>;
+            const sources = [
+              record,
+              record.usage,
+              record.message,
+              record.response,
+              (record.message as Record<string, unknown> | undefined)?.usage,
+              (record.response as Record<string, unknown> | undefined)?.usage,
+            ].filter((entry): entry is Record<string, unknown> =>
+              entry !== null && typeof entry === "object",
+            );
+            const usage = sources.find(
+              (entry) => "prompt_tokens" in entry || "input_tokens" in entry,
+            );
+
+            if (usage === undefined) return;
+
+            const promptValue = usage.prompt_tokens ?? usage.input_tokens;
+            const completionValue = usage.completion_tokens ?? usage.output_tokens;
+            if (typeof promptValue === "number" && promptValue >= 0) {
+              promptTokens = Math.max(promptTokens, Math.trunc(promptValue));
+            }
+            if (typeof completionValue === "number" && completionValue >= 0) {
+              completionTokens = Math.max(completionTokens, Math.trunc(completionValue));
+            }
+            if (typeof usage.cost === "number" && usage.cost >= 0) {
+              costUsd = Math.max(costUsd, usage.cost);
+            }
+            const reason =
+              record.finish_reason ??
+              (record.choices as { finish_reason?: unknown }[] | undefined)?.[0]?.finish_reason ??
+              (record.delta as { stop_reason?: unknown } | undefined)?.stop_reason ??
+              (record.response as { status?: unknown } | undefined)?.status;
+            if (typeof reason === "string") finishReason = reason.slice(0, 64);
+          };
+
           try {
-            const parsed = JSON.parse(payload.toString("utf8")) as {
-              usage?: {
-                prompt_tokens?: unknown;
-                completion_tokens?: unknown;
-                cost?: unknown;
-              };
-              choices?: { finish_reason?: unknown }[];
-            };
-            const usage = parsed.usage ?? {};
-            promptTokens =
-              typeof usage.prompt_tokens === "number" && usage.prompt_tokens >= 0
-                ? Math.trunc(usage.prompt_tokens)
-                : 0;
-            completionTokens =
-              typeof usage.completion_tokens === "number" && usage.completion_tokens >= 0
-                ? Math.trunc(usage.completion_tokens)
-                : 0;
-            costUsd =
-              typeof usage.cost === "number" && usage.cost >= 0 ? usage.cost : 0;
-            const reason = parsed.choices?.[0]?.finish_reason;
-            finishReason = typeof reason === "string" ? reason.slice(0, 64) : "unknown";
+            readUsage(JSON.parse(rawPayload));
           } catch {
-            // Non-JSON provider responses are still forwarded; metrics stay zero.
+            for (const line of rawPayload.split("\n")) {
+              const trimmedLine = line.trim();
+              if (!trimmedLine.startsWith("data:")) continue;
+              try {
+                readUsage(JSON.parse(trimmedLine.slice(5).trim()));
+              } catch {
+                // Ignore non-JSON SSE frames.
+              }
+            }
+          }
+
+          const generationId = upstreamResponse.headers["x-generation-id"];
+
+          if (
+            typeof generationId === "string" &&
+            target.origin === "https://openrouter.ai" &&
+            (promptTokens === 0 || costUsd === 0)
+          ) {
+            try {
+              const generation = await fetch(
+                `https://openrouter.ai/api/v1/generation?id=${encodeURIComponent(generationId)}`,
+                {
+                  headers: { authorization: `Bearer ${apiKey}` },
+                  signal: AbortSignal.timeout(2_000),
+                },
+              );
+
+              if (generation.ok) {
+                const detail = (await generation.json()) as {
+                  data?: {
+                    tokens_prompt?: unknown;
+                    tokens_completion?: unknown;
+                    total_cost?: unknown;
+                  };
+                };
+                const value = detail.data ?? {};
+                if (typeof value.tokens_prompt === "number") promptTokens = Math.trunc(value.tokens_prompt);
+                if (typeof value.tokens_completion === "number") completionTokens = Math.trunc(value.tokens_completion);
+                if (typeof value.total_cost === "number") costUsd = value.total_cost;
+              }
+            } catch {
+              // Generation lookup is best-effort; the event still records timing.
+            }
           }
 
           appendTrace(trace, {

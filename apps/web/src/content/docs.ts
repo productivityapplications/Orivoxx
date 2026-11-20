@@ -133,7 +133,8 @@ export const DOC_SECTIONS: DocSection[] = [
         head: ["Adapter", "Kind", "Model", "Runtime"],
         rows: [
           ["fake", "Baseline", "none", "In-process fixture"],
-          ["python-openrouter", "Harness", "MODEL_NAME", "Python 3.12 stdlib"],
+          ["claude-code-openrouter", "Harness", "anthropic/claude-sonnet-4.5", "Claude Code 2.1.329"],
+          ["codex-openrouter", "Harness", "openai/gpt-5.1-codex", "Codex CLI 0.171.0"],
           ["aider-openrouter", "Harness", "MODEL_NAME", "Aider 0.86.2"],
         ],
       },
@@ -220,6 +221,17 @@ export const DOC_SECTIONS: DocSection[] = [
     blocks: [
       { type: "list", items: ["tool_error — one write fails with EACCES; tests recovery and retry policy", "latency — every model call is delayed; tests the stopping policy and budget guards", "context_pressure — context is truncated and the step budget shrinks; tests completeness and detection"] },
       { type: "p", text: "Chaos injections are labelled ground truth. The attribution engine is measured against those labels; precision (the proof crosses the threshold) and recall (the expected cell is named) are reported separately in the build log." },
+    ],
+  },
+  {
+    slug: "community-tasks",
+    title: "Community tasks",
+    summary: "Submission, six validation gates, private visibility, and curator promotion.",
+    blocks: [
+      { type: "p", text: "Anyone can submit a real GitHub issue task from /tasks/new: repoUrl, baseCommit, issueText, testCommand, visibility. GitHub OAuth is preferred when configured; otherwise a hashed anonymous cookie is the stable submitter id." },
+      { type: "h2", text: "Six gates" },
+      { type: "list", items: ["Cloned — exact base commit, 60s", "Installs — runtime dependencies only; network-dependent installs are rejected", "Test fails at base — nonzero exit", "Deterministic — three failing runs", "Time bounded — each run under 600s", "License — GitHub API SPDX or LICENSE-file heuristic against a permissive allowlist"] },
+      { type: "p", text: "A validated community task becomes public only after a curator promotes it. Private tasks return 403 to every other viewer. Rate limits: 3 pending per user, 10 per 24 hours per user, 20 globally." },
     ],
   },
   {

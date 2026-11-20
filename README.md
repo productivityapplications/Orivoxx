@@ -7,7 +7,7 @@ Orivoxx benchmarks AI software-engineering agents and attributes their failures.
 **No model is in the score path. No attribution is accepted without evidence.**
 
 [![deployed](https://img.shields.io/badge/deployed-orivoxx.vercel.app-17CF97?style=flat-square)](https://orivoxx.vercel.app)
-[![tests](https://img.shields.io/badge/unit%20tests-480%20passing-17CF97?style=flat-square)](#testing)
+[![tests](https://img.shields.io/badge/unit%20tests-491%20passing-17CF97?style=flat-square)](#testing)
 [![attribution](https://img.shields.io/badge/attribution-proof--backed-17CF97?style=flat-square)](#failure-attribution)
 [![sandbox](https://img.shields.io/badge/agent%20execution-Docker%20sandbox-75A7FF?style=flat-square)](#the-sandbox-guarantee)
 [![license](https://img.shields.io/badge/license-MIT-8C8C85?style=flat-square)](LICENSE)
@@ -25,6 +25,9 @@ Orivoxx benchmarks AI software-engineering agents and attributes their failures.
 - [Architecture](#architecture)
 - [Quickstart](#quickstart)
 - [Run a real agent](#run-a-real-agent)
+- [Real repository tasks](#real-repository-tasks)
+- [Community and private tasks](#community-and-private-tasks)
+- [Brand-name agents](#brand-name-agents)
 - [Adding a benchmark task](#adding-a-benchmark-task)
 - [Adding an adapter](#adding-an-adapter)
 - [The deterministic guarantee](#the-deterministic-guarantee)
@@ -238,7 +241,7 @@ pnpm bench:run --task taskboard --adapter python-openrouter \
 pnpm bench:run --task taskboard --adapter aider-openrouter --model openai/gpt-4o-mini
 ```
 
-Recorded on 15–18 November 2026:
+Synthetic TaskBoard runs (kept for attribution/proof history; not the headline set):
 
 | Adapter | Model | Chaos | Overall | Result | Proof |
 |---|---|---|---:|---|---|
@@ -251,6 +254,52 @@ Recorded on 15–18 November 2026:
 | aider-openrouter | openai/gpt-4o-mini | none | 97.3 | `res_a39c6e29…` | — |
 
 The insufficient 49.9 proof is shown honestly: that generated project route did not satisfy the critical marker even after retry, so the harness cell is rule-matched but not proven.
+
+## Real repository tasks
+
+Six curated tasks replace synthetic specs as the public comparison set. Each pins a real GitHub repository at a base commit, an issue, and a single test command. The primary success condition is **test exit 0**; security and maintainability are deterministic quality flags. The agent is never shown the test command.
+
+| Task | Repository | License | Test |
+|---|---|---|---|
+| `is-decimal-single-char` | `wooorm/is-decimal` | MIT | `node -e "…isDecimal('12')…"` |
+| `is-hexadecimal-single-char` | `wooorm/is-hexadecimal` | MIT | `node -e "…isHexadecimal('FF')…"` |
+| `is-alphabetical-single-char` | `wooorm/is-alphabetical` | MIT | `node -e "…isAlphabetical('ab')…"` |
+| `is-word-character-single-char` | `wooorm/is-word-character` | MIT | `node -e "…isWordCharacter('ab')…"` |
+| `is-whitespace-single-char` | `wooorm/is-whitespace-character` | MIT | `node -e "…isWhitespaceCharacter('  ')…"` |
+| `is-number-reject-hex` | `jonschlinkert/is-number` | MIT | `node -e "…isNumber('0x10')…"` |
+
+### Real repository runs
+
+| Agent | Task | Test | Duration | Cost | Result |
+|---|---|---|---:|---:|---|
+| Claude Code | `is-decimal-single-char` | PASS | 32.4s | $0.1512 | `res_77ab9c6d…` |
+| Codex CLI | `is-hexadecimal-single-char` | PASS | 52.7s | — | `res_6006423b…` |
+| Codex CLI | `is-number-reject-hex` | PASS | 40.6s | — | `res_9da7482d…` |
+| Codex CLI | `is-whitespace-single-char` | PASS | 66.1s | $0.0643 | `res_5d3d11b2…` |
+| Aider (baseline) | `is-word-character-single-char` | PASS | 35.2s | $0.0083 | `res_2016ec8f…` |
+
+All brand agents route through OpenRouter via the sandbox proxy. GitHub Copilot CLI is excluded: its org policy/auth does not expose an OpenRouter base URL.
+
+Recorded brand-agent runs (all test-pass): Claude Code 2/2, Codex 2/2, Aider baseline 1/1. Results are stored with `taskSuccess`, `test`, six metrics, trace, and a real-task metadata block.
+
+## Community and private tasks
+
+Anyone can submit `{ repoUrl, baseCommit, issueText, testCommand, visibility }` from `/tasks/new`. GitHub OAuth is preferred when configured; otherwise an HttpOnly anonymous token hashes to a stable submitter id.
+
+Six validation gates run in the same sandbox: clone, install, test fails at base, deterministic (3×), time bounded (600s), license. A valid community task is promoted by a curator from `CURATOR_USERNAMES`; private tasks return **403** to every other viewer. Queue keys: `orivoxx:task:{id}`, `orivoxx:task:{id}:validation`, `orivoxx:user:{id}:tasks`, `orivoxx:validations:pending`, `orivoxx:validations:daily`. Rate limits: 3 pending / 10 per 24h per user / 20 globally.
+
+Worker: `node --env-file=.env.local packages/harness/scripts/validate-task.mjs` on an organizer machine with Docker.
+
+## Brand-name agents
+
+| Agent | Runtime | OpenRouter routing | Status |
+|---|---|---|---|
+| Claude Code 2.1.329 | sandbox | `ANTHROPIC_BASE_URL` + auth token through the proxy | Runs |
+| OpenAI Codex CLI 0.171.0 | sandbox | Responses wire API through the proxy | Runs |
+| Aider 0.86.2 | sandbox | OpenAI-compatible proxy, pinned | Runs (baseline) |
+| GitHub Copilot CLI 1.0.114 | excluded | requires Copilot org policy/auth; no OpenRouter base-url override | Excluded |
+
+The real provider key never enters the sandbox. Each CLI receives the proxy sentinel; the sidecar injects the OpenRouter key host-side.
 
 ## Adding a benchmark task
 
@@ -328,7 +377,7 @@ demo/                    narrated video, script, reference study
 ## Testing
 
 ```bash
-pnpm -r test        # 480 unit tests
+pnpm -r test        # 491 unit tests
 pnpm -r typecheck
 pnpm -r lint
 pnpm -r build
@@ -340,7 +389,7 @@ pnpm --filter @orivoxx/harness sandbox:build
 ORIVOXX_DOCKER_TESTS=1 pnpm --filter @orivoxx/harness test
 ```
 
-The suite covers parser fixtures, deterministic precedence, malicious archives, secret redaction, schema failures, provider timeouts, prompt injection, origin checks, rate limits, static import extraction, structural metrics, leaderboard ordering, version-field enforcement, trace redaction, attribution fixtures, replay invariants, sandbox quotas, artifact capture, adapter contracts, and responsive dark UI.
+The suite covers parser fixtures, real-task loaders and test-command parsing, brand adapter routing, community queue rates,, deterministic precedence, malicious archives, secret redaction, schema failures, provider timeouts, prompt injection, origin checks, rate limits, static import extraction, structural metrics, leaderboard ordering, version-field enforcement, trace redaction, attribution fixtures, replay invariants, sandbox quotas, artifact capture, adapter contracts, and responsive dark UI.
 
 ## Hackathon
 

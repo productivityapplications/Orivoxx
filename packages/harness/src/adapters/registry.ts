@@ -1,8 +1,8 @@
 import { AdapterKindSchema, AdapterModelSchema, type AgentAdapter } from "../contracts.js";
 import { HarnessError } from "../errors.js";
 import { createAiderOpenRouterAdapter } from "./aider.js";
+import { createBrandAdapter } from "./brand.js";
 import { createFakeAdapter, FAKE_ADAPTER_ID } from "./fake.js";
-import { createPythonOpenRouterAdapter } from "./python.js";
 
 export interface AdapterSummary {
   id: string;
@@ -14,7 +14,8 @@ export interface AdapterSummary {
 
 const ADAPTERS: readonly AgentAdapter[] = [
   createFakeAdapter(),
-  createPythonOpenRouterAdapter(),
+  createBrandAdapter("claude-code-openrouter"),
+  createBrandAdapter("codex-openrouter"),
   createAiderOpenRouterAdapter(),
 ];
 

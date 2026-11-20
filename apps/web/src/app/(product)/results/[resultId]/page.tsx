@@ -44,10 +44,21 @@ export default async function ResultPage({
   const outcomeStatus = new Map(
     result.score.requirements.map((requirement) => [requirement.id, requirement.status]),
   );
-  const requirements: RequirementRow[] = (task?.requirements ?? []).map((requirement) => ({
-    ...requirement,
-    status: outcomeStatus.get(requirement.id) ?? "UNVERIFIED",
-  }));
+  const requirements: RequirementRow[] =
+    task !== null
+      ? task.requirements.map((requirement) => ({
+          ...requirement,
+          status: outcomeStatus.get(requirement.id) ?? "UNVERIFIED",
+        }))
+      : result.score.requirements.map((requirement) => ({
+          id: requirement.id,
+          title: requirement.id,
+          description: "Real-repository task requirement.",
+          severity: requirement.severity,
+          bench: requirement.bench,
+          status: requirement.status,
+          checks: [],
+        }));
 
   return (
     <div className="space-y-7">
@@ -73,6 +84,11 @@ export default async function ResultPage({
           <StatusChip tone={result.run.status === "completed" ? "pass" : "fail"}>
             {result.run.status}
           </StatusChip>
+          {result.taskSuccess !== undefined ? (
+            <StatusChip tone={result.taskSuccess ? "pass" : "fail"}>
+              test {result.taskSuccess ? "passed" : "failed"}
+            </StatusChip>
+          ) : null}
           {result.chaos ? <StatusChip tone="unverified">{result.chaos.kind}</StatusChip> : null}
           {read.degraded ? <StatusChip tone="degraded">Store degraded</StatusChip> : null}
         </div>
@@ -111,6 +127,26 @@ export default async function ResultPage({
           </div>
         </div>
       </div>
+
+      {result.realTask ? (
+        <section className="rounded-xl border border-border-subtle bg-panel p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-medium text-primary">Repository task</h2>
+            <span className="font-mono text-[10px] text-muted">{result.realTask.license} · {result.realTask.language}</span>
+          </div>
+          <p className="mt-2 font-mono text-[11px] text-secondary">{result.realTask.repoUrl}</p>
+          <p className="mt-1 font-mono text-[10px] text-muted">base {result.realTask.baseCommit}</p>
+          {result.test ? (
+            <div className="mt-3 rounded-lg border border-border-subtle bg-app p-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">test command</p>
+              <code className="mt-1 block overflow-x-auto font-mono text-[11px] text-secondary">{result.test.command}</code>
+              <p className={`mt-2 text-xs ${result.test.passed ? "text-pass" : "text-fail"}`}>
+                exit {result.test.exitCode ?? "timeout"} · {result.test.durationMs}ms · {result.test.passed ? "PASS" : "FAIL"}
+              </p>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {result.metrics ? <MetricsGrid metrics={result.metrics} /> : null}
 

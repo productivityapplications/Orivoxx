@@ -14,8 +14,25 @@ export function middleware(request: NextRequest): NextResponse {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-request-id", requestId);
 
+  const existingAnon = request.cookies.get("orivoxx_anon")?.value;
+  const anon =
+    existingAnon !== undefined && /^[a-f0-9-]{16,64}$/i.test(existingAnon)
+      ? existingAnon
+      : crypto.randomUUID();
+  requestHeaders.set("x-orivoxx-anon", anon);
+
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("x-request-id", requestId);
+
+  if (existingAnon === undefined) {
+    response.cookies.set("orivoxx_anon", anon, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
 
   return response;
 }

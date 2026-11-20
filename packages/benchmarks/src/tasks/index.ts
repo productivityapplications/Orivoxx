@@ -7,6 +7,8 @@ import { TASKBOARD_FIXTURES, TASKBOARD_TASK } from "./taskboard/index.js";
 
 export { LINKSTASH_FIXTURES, LINKSTASH_TASK } from "./linkstash/index.js";
 export { TASKBOARD_FIXTURES, TASKBOARD_TASK } from "./taskboard/index.js";
+export * from "./real.js";
+export * from "./real-registry.js";
 export {
   TaskNotFoundError,
   TaskRegistry,

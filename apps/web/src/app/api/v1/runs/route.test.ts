@@ -163,7 +163,7 @@ describe("POST /api/v1/runs", () => {
 
 describe("task routes", () => {
   it("lists task summaries with version fields", async () => {
-    const response = await tasksRoute();
+    const response = await tasksRoute(new Request("http://localhost/api/v1/tasks"));
     const body = await response.json();
 
     expect(response.status).toBe(200);

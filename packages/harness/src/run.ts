@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readFile, rm } from "node:fs/promises";
-import { isAbsolute, join, resolve } from "node:path";
+import { join } from "node:path";
 
 import type { TaskDefinition } from "@orivoxx/benchmarks";
 import {
@@ -25,6 +25,7 @@ import {
 } from "./contracts.js";
 import { captureWorkspace, type CaptureOptions } from "./capture.js";
 import { HarnessError } from "./errors.js";
+import { parseTestCommand } from "./test-command.js";
 import {
   assertEmptyDirectory,
   writeProjectFiles,
@@ -40,7 +41,10 @@ function summarizeStream(raw: string): string {
     return redacted;
   }
 
-  return `${redacted.slice(0, HARNESS_LIMITS.maxSummaryChars)}[truncated]`;
+  return `${redacted.slice(0, HARNESS_LIMITS.maxSummaryChars - 12)}[truncated]`.slice(
+    0,
+    HARNESS_LIMITS.maxSummaryChars,
+  );
 }
 
 const TRACE_DIRECTORY = ".orivoxx";
@@ -212,6 +216,8 @@ export interface RunAdapterOptions {
   capture?: CaptureOptions;
   runId?: string;
   now?: () => Date;
+  testCommand?: string;
+  testTimeoutMs?: number;
 }
 
 function parseInput(input: AdapterRunInput): AdapterRunInput {
@@ -261,6 +267,7 @@ export async function runAdapterDetailed(
   let stdout = "";
   let stderr = "";
   let proxyTrace: unknown[] = [];
+  let test: AdapterRunOutput["test"];
 
   if (plan.kind === "materialize") {
     await writeProjectFiles(options.workspace, plan.files, { overwrite: true });
@@ -292,6 +299,25 @@ export async function runAdapterDetailed(
 
     if (timedOut) {
       exitCode = null;
+    }
+
+    if (options.testCommand !== undefined && options.testCommand.length > 0) {
+      const testCommand = parseTestCommand(options.testCommand);
+      const testResult = await executor.execute({
+        command: testCommand,
+        workspace: options.workspace,
+        timeoutMs: options.testTimeoutMs ?? 600_000,
+        maxOutputBytes: Math.min(input.limits.maxOutputBytes, 1_048_576),
+      });
+
+      test = {
+        command: options.testCommand,
+        exitCode: testResult.timedOut ? null : testResult.exitCode,
+        timedOut: testResult.timedOut,
+        durationMs: testResult.durationMs,
+        passed: !testResult.timedOut && testResult.exitCode === 0,
+        outputSummary: summarizeStream(`${testResult.stdout}\n${testResult.stderr}`),
+      };
     }
   }
 
@@ -332,6 +358,7 @@ export async function runAdapterDetailed(
     stats: captured.stats,
     ...(collected.trace.length === 0 ? {} : { trace: collected.trace }),
     ...(collected.trace.length === 0 ? {} : { traceTruncated: collected.truncated }),
+    ...(test === undefined ? {} : { test }),
   });
 
   return { output, actions };

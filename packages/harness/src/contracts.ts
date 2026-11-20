@@ -37,6 +37,12 @@ export const ADAPTER_ENV_ALLOWLIST = [
   "AIDER_MODEL",
   "AIDER_OPENAI_API_BASE",
   "AIDER_OPENAI_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
+  "ANTHROPIC_BASE_URL",
+  "CODEX_HOME",
+  "ISSUE_PATH",
+  "BRAND_AGENT",
   "ORIVOXX_CHAOS",
   "ORIVOXX_TRACE_FILE",
   "ORIVOXX_ACTION_FILE",
@@ -219,6 +225,17 @@ export const AdapterRunOutputSchema = z
     stderrSummary: z.string().max(HARNESS_LIMITS.maxSummaryChars),
     trace: z.array(TraceEventSchema).max(500).optional(),
     traceTruncated: z.boolean().optional(),
+    test: z
+      .object({
+        command: z.string().min(1).max(500),
+        exitCode: z.number().int().min(0).max(255).nullable(),
+        timedOut: z.boolean(),
+        durationMs: z.number().int().nonnegative(),
+        passed: z.boolean(),
+        outputSummary: z.string().max(8_192),
+      })
+      .strict()
+      .optional(),
     warnings: z.array(z.string().max(500)).max(HARNESS_LIMITS.maxWarnings),
     repositoryFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     files: z.array(CapturedFileSchema).max(HARNESS_LIMITS.maxFiles),

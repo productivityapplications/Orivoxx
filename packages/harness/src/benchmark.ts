@@ -1,7 +1,6 @@
 import type { TaskDefinition } from "@orivoxx/benchmarks";
 import { evaluateRepository, type RepositoryEvaluation } from "@orivoxx/benchmarks";
 import {
-  ChaosKindSchema,
   RunFinishedEventSchema,
   RunStartedEventSchema,
   deriveRunMetrics,
@@ -71,7 +70,7 @@ function exitReasonOf(run: AdapterRunOutput): ExitReason {
   }
 }
 
-function envelopeTrace(
+export function envelopeTrace(
   input: AdapterRunInput,
   run: AdapterRunOutput,
   runIndex: number,

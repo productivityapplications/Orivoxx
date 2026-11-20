@@ -10,6 +10,7 @@ import { resolveOpenRouterModel, type OpenRouterModelOptions } from "./model.js"
 export const AIDER_ADAPTER_ID = "aider-openrouter";
 export const AIDER_ADAPTER_VERSION = "1.0.0";
 export const AIDER_RUNNER_SCRIPT = "/opt/orivoxx/agents/aider_runner.py";
+export const REAL_AIDER_RUNNER_SCRIPT = "/opt/orivoxx/agents/real_aider_runner.py";
 export const AIDER_VERSION = "0.86.2";
 
 export type AiderAdapterOptions = OpenRouterModelOptions;
@@ -45,11 +46,15 @@ export function createAiderOpenRouterAdapter(
         );
       }
 
+      const script = input.startingFiles.some((file) => file.path === ".orivoxx/issue.md")
+        ? REAL_AIDER_RUNNER_SCRIPT
+        : AIDER_RUNNER_SCRIPT;
+
       return {
         kind: "process",
         command: {
           file: "python3",
-          args: [AIDER_RUNNER_SCRIPT],
+          args: [script],
           env: {
             MODEL_PROXY_URL: "http://model-proxy:8080/v1",
             MODEL_NAME: model.name,

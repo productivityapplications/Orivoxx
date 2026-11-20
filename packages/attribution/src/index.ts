@@ -19,6 +19,14 @@ export interface AttributionInput {
   passThreshold?: number;
   /** Previous overall scores for the same adapter/task/model, oldest first. */
   previousScores?: readonly number[];
+  test?: {
+    command: string;
+    passed: boolean;
+    timedOut: boolean;
+    exitCode: number | null;
+  };
+  /** True for real repository tasks where a test command is required. */
+  requiresTest?: boolean;
 }
 
 interface Candidate {
@@ -400,6 +408,111 @@ function ruleMisleadingSpec(
   };
 }
 
+function ruleTestTimeout(test: AttributionInput["test"]): Candidate | null {
+  if (test?.timedOut !== true) return null;
+
+  return {
+    layer: "environment",
+    mode: "execution",
+    ruleId: "test_timeout",
+    evidence: [
+      {
+        stepIndex: null,
+        kind: "check",
+        detail: `test command timed out: ${test.command}`,
+      },
+    ],
+  };
+}
+
+function ruleTestSkipped(
+  test: AttributionInput["test"],
+  trace: readonly TraceEvent[],
+  requiresTest: boolean,
+): Candidate | null {
+  if (!requiresTest || test !== undefined || trace.length === 0) return null;
+
+  return {
+    layer: "harness",
+    mode: "execution",
+    ruleId: "test_run_skipped",
+    evidence: [
+      { stepIndex: null, kind: "exit", detail: "no test result was recorded for the run" },
+    ],
+  };
+}
+
+function rulePatchApplyFailed(trace: readonly TraceEvent[]): Candidate | null {
+  const failure = trace.find(
+    (event) =>
+      event.type === "tool_call_finished" &&
+      event.status !== "ok" &&
+      /apply_patch|edit_file|patch/i.test(event.toolName),
+  );
+
+  if (failure?.type !== "tool_call_finished") return null;
+
+  return {
+    layer: "harness",
+    mode: "recovery",
+    ruleId: "patch_apply_failed_unhandled",
+    evidence: [
+      {
+        stepIndex: failure.stepIndex,
+        kind: "tool_error",
+        detail: `${failure.toolName} failed (${failure.resultRedacted}) and was not recovered`,
+      },
+    ],
+  };
+}
+
+function ruleTestFailedAfterPatch(
+  test: AttributionInput["test"],
+  trace: readonly TraceEvent[],
+): Candidate | null {
+  if (test === undefined || test.passed || test.timedOut) return null;
+
+  const changed = trace.some(
+    (event) => event.type === "tool_call_finished" && event.status === "ok",
+  );
+
+  if (!changed) return null;
+
+  return {
+    layer: "model",
+    mode: "decision",
+    ruleId: "test_failed_after_patch",
+    evidence: [
+      {
+        stepIndex: trace.find((event) => "stepIndex" in event)?.stepIndex ?? 1,
+        kind: "check",
+        detail: `test command failed after the agent's patch: ${test.command}`,
+      },
+    ],
+  };
+}
+
+function ruleIssueAmbiguous(
+  test: AttributionInput["test"],
+  trace: readonly TraceEvent[],
+): Candidate | null {
+  if (test === undefined || test.passed) return null;
+
+  const modelCalls = trace.filter((event) => event.type === "model_call_finished").length;
+  const tools = trace.filter((event) => event.type === "tool_call_finished").length;
+
+  if (modelCalls > 0 || tools > 0) return null;
+
+  return {
+    layer: "spec",
+    mode: "detection",
+    ruleId: "issue_ambiguous_vs_test",
+    evidence: [
+      { stepIndex: null, kind: "spec", detail: "no model or tool step matched the issue's test expectation" },
+    ],
+  };
+}
+
 /**
  * Deterministic rule engine. First matching rule wins. No model call, no
  * source inspection, and no guessed cell: evidence arrays are required.
@@ -431,6 +544,11 @@ export function attributeRun(input: AttributionInput): AttributionResult {
   );
 
   const rules: (() => Candidate | null)[] = [
+    () => ruleTestTimeout(input.test),
+    () => ruleTestSkipped(input.test, input.trace, input.requiresTest === true),
+    () => rulePatchApplyFailed(input.trace),
+    () => ruleTestFailedAfterPatch(input.test, input.trace),
+    () => ruleIssueAmbiguous(input.test, input.trace),
     () => ruleRetriedGaveUp(input.trace),
     () => ruleToolErrorUnhandled(input.trace),
     () => ruleToolReturnedGarbage(input.trace),

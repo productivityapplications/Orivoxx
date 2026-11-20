@@ -7,11 +7,17 @@ RUN apt-get update \
     python3 \
     python3-pip \
     python3-venv \
+    ripgrep \
   && rm -rf /var/lib/apt/lists/*
 
 # Aider is pinned: a benchmark run must be reproducible from the image tag.
 RUN python3 -m venv /opt/aider \
   && /opt/aider/bin/pip install --no-cache-dir --disable-pip-version-check aider-chat==0.86.2
+
+# Brand CLIs are pinned. All model traffic goes through the allowlisted proxy.
+RUN npm install -g --no-audit --no-fund \
+    @anthropic-ai/claude-code@2.1.329 \
+    @openai/codex@0.171.0
 
 RUN groupadd --gid 10001 runner \
   && useradd --uid 10001 --gid 10001 --create-home --home-dir /home/runner --shell /usr/sbin/nologin runner

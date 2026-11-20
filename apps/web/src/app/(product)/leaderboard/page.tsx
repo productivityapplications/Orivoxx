@@ -5,6 +5,10 @@ import { groupReliability } from "@orivoxx/results";
 import { EmptyState } from "@/components/empty-state";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { StatusChip } from "@/components/status-chip";
+import { CURATED_REAL_TASKS } from "@orivoxx/benchmarks";
+
+import { viewer } from "@/server/auth";
+import { listUserTasks } from "@/server/community-tasks";
 import { webLeaderboard } from "@/server/results";
 import { taskSummaries } from "@/server/tasks";
 
@@ -29,6 +33,8 @@ export default async function LeaderboardPage({
     limit: 100,
     kind: activeKind,
   });
+  const current = await viewer();
+  const myTasks = await listUserTasks(current.id).catch(() => []);
   const profiles = new Map(
     groupReliability(leaderboard.entries).map((group) => [
       `${group.adapterId}:${group.taskId}`,
@@ -112,6 +118,20 @@ export default async function LeaderboardPage({
         >
           All tasks
         </Link>
+        {CURATED_REAL_TASKS.slice(0, 6).map((entry) => (
+          <Link
+            key={entry.id}
+            href={`/leaderboard?task=${entry.id}`}
+            aria-current={activeTask === entry.id ? "page" : undefined}
+            className={`rounded border px-2.5 py-1 text-xs ${
+              activeTask === entry.id
+                ? "border-accent bg-raised text-primary"
+                : "border-border-subtle text-secondary hover:border-border-strong"
+            }`}
+          >
+            {entry.id}
+          </Link>
+        ))}
         {tasks.map((entry) => (
           <Link
             key={entry.id}
@@ -155,6 +175,24 @@ export default async function LeaderboardPage({
           reliability={profiles}
         />
       )}
+
+      {myTasks.length > 0 ? (
+        <section className="rounded-xl border border-border-subtle bg-panel p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-medium text-primary">Your tasks</h2>
+            <Link href="/tasks/mine" className="text-xs text-accent-secondary hover:underline">All submissions →</Link>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {myTasks.slice(0, 5).map((task) => (
+              <li key={task.id} className="flex flex-wrap items-center gap-2 text-xs">
+                <Link href={`/tasks/${task.id}`} className="text-secondary hover:text-primary">{task.title}</Link>
+                <span className="font-mono text-[10px] text-muted">{task.visibility}</span>
+                <span className="ml-auto font-mono text-[10px] text-muted">{task.status}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <p className="text-xs leading-5 text-muted">
         A leaderboard-valid row records task, ruleset, scoring-config, and adapter versions plus a

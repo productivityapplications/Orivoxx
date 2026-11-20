@@ -60,6 +60,30 @@ export type ModelIdentity = z.infer<typeof ModelIdentitySchema>;
 export const RunOutcomeSchema = z.enum(["completed", "failed", "timeout"]);
 export type RunOutcome = z.infer<typeof RunOutcomeSchema>;
 
+export const TestRunSchema = z
+  .object({
+    command: z.string().min(1).max(500),
+    exitCode: z.number().int().min(0).max(255).nullable(),
+    timedOut: z.boolean(),
+    durationMs: z.number().int().nonnegative(),
+    passed: z.boolean(),
+    outputSummary: z.string().max(8_192),
+  })
+  .strict();
+export type TestRun = z.infer<typeof TestRunSchema>;
+
+export const RealTaskMetaSchema = z
+  .object({
+    repoUrl: z.string().url().max(2048),
+    baseCommit: z.string().regex(/^[a-f0-9]{7,40}$/),
+    language: z.enum(["python", "node"]),
+    source: z.enum(["handpicked", "community", "private"]),
+    visibility: z.enum(["curated", "community", "private"]),
+    license: z.string().min(1).max(64),
+  })
+  .strict();
+export type RealTaskMeta = z.infer<typeof RealTaskMetaSchema>;
+
 export const RunSummarySchema = z
   .object({
     status: RunOutcomeSchema,
@@ -140,6 +164,9 @@ const LeaderboardFields = {
   chaos: ChaosMetadataSchema.optional(),
   attribution: AttributionSchema.nullable().optional(),
   attributionReason: z.string().max(300).nullable().optional(),
+  taskSuccess: z.boolean().optional(),
+  test: TestRunSchema.optional(),
+  realTask: RealTaskMetaSchema.optional(),
 } as const;
 
 export const LeaderboardEntrySchema = z.object(LeaderboardFields).strict();
@@ -157,6 +184,9 @@ export const BenchmarkResultSchema = z
     chaos: ChaosMetadataSchema.optional(),
     attribution: AttributionSchema.nullable().optional(),
     attributionReason: z.string().max(300).nullable().optional(),
+    taskSuccess: z.boolean().optional(),
+    test: TestRunSchema.optional(),
+    realTask: RealTaskMetaSchema.optional(),
   })
   .strict()
   .superRefine((result, context) => {
@@ -310,6 +340,9 @@ export function toLeaderboardEntry(result: BenchmarkResult): LeaderboardEntry {
     ...(result.attributionReason === undefined
       ? {}
       : { attributionReason: result.attributionReason }),
+    ...(result.taskSuccess === undefined ? {} : { taskSuccess: result.taskSuccess }),
+    ...(result.test === undefined ? {} : { test: result.test }),
+    ...(result.realTask === undefined ? {} : { realTask: result.realTask }),
   });
 }
 
@@ -327,6 +360,9 @@ export interface BuildBenchmarkResultInput {
   chaos?: BenchmarkResult["chaos"];
   attribution?: BenchmarkResult["attribution"];
   attributionReason?: string | null;
+  taskSuccess?: boolean;
+  test?: BenchmarkResult["test"];
+  realTask?: BenchmarkResult["realTask"];
 }
 
 export function buildBenchmarkResult(
@@ -360,5 +396,8 @@ export function buildBenchmarkResult(
     ...(input.attributionReason === undefined
       ? {}
       : { attributionReason: input.attributionReason }),
+    ...(input.taskSuccess === undefined ? {} : { taskSuccess: input.taskSuccess }),
+    ...(input.test === undefined ? {} : { test: input.test }),
+    ...(input.realTask === undefined ? {} : { realTask: input.realTask }),
   });
 }

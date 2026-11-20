@@ -515,3 +515,49 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - Real attribution precision is low on the small sample (1/3) because two generated project routes did not satisfy the critical marker even after retry; they are shown as insufficient, not hidden.
 - Leaderboard reliability groups mix pre-trace runs with traced runs; the run count makes this visible.
 - `middleware.ts` is deprecated in Next 16.4.2 in favour of `proxy`; warning only.
+
+## 2026-11-20 — Brand agents, real tasks, community ingestion
+
+**Brand agents**
+
+- Added `claude-code-openrouter` (Claude Code 2.1.329, `anthropic/claude-sonnet-4.5`) and `codex-openrouter` (Codex CLI 0.171.0, `openai/gpt-5.1-codex`) to the sandbox image and adapter registry. Both route through the existing allowlisted proxy: Claude via `ANTHROPIC_BASE_URL`/sentinel token, Codex via a generated `config.toml` with the Responses wire API and sentinel `OPENAI_API_KEY`.
+- Aider remains the baseline, now with a real-repository wrapper (`real_aider_runner.py`) when `.orivoxx/issue.md` is present.
+- GitHub Copilot CLI 1.0.114 was attempted; its policy/auth model denied access and it has no OpenRouter base-url override. Excluded, documented.
+- Copilot and Cursor are not in the registry. `python-openrouter` remains in source but is no longer in the headline registry.
+
+**Real tasks**
+
+- `packages/benchmarks/src/tasks/real.ts` — real-task schema (repoUrl, baseCommit, issueText, testCommand, passCondition, visibility, status, validation).
+- Six curated MIT tasks: `is-decimal`, `is-hexadecimal`, `is-alphabetical`, `is-word-character`, `is-whitespace-character`, `is-number`, each pinned to a real commit. Test commands are single `node -e` assertions that fail at base.
+- `real-registry.ts` loads disk → remote → curated; `real-score.ts` scores test exit 0 as primary, with security/maintainability flags.
+- `real-task.ts` clones on the host at the exact commit, strips `.git`, and bounds text files; the agent and test run in Docker.
+- Recorded: Claude 1/1 pass ($0.151), Codex 3/3 pass ($0.064 captured on one; two older runs have no cost), Aider 1/1 pass ($0.008). All five rows have `taskSuccess: true`.
+- New attribution rules: `test_failed_after_patch`, `patch_apply_failed_unhandled`, `test_run_skipped`, `test_timeout`, `issue_ambiguous_vs_test`.
+
+**Community ingestion**
+
+- `apps/web/src/server/community-tasks.ts` — Upstash task keys, validation queue, per-user/global rate limits, private visibility, curator promotion/reject.
+- Identity: GitHub OAuth routes (`/api/auth/github`, callback, logout) with signed session cookie when `GITHUB_CLIENT_ID/SECRET` exist; HttpOnly anonymous UUID fallback otherwise. `viewer()` hashes the anonymous token.
+- API: `POST /api/v1/tasks`, `GET ?mine=true`, real-task detail with validation events, `PATCH /promote`, `POST /reject`.
+- UI: `/tasks`, `/tasks/new`, `/tasks/[taskId]` (3s polling), `/tasks/mine`; app home card; leaderboard includes curated task filters and owner task list.
+- Validation worker: `packages/harness/scripts/validate-task.mjs`; six gates in the same sandbox, license via GitHub API with LICENSE fallback.
+- Real community task `is-decimal-d36f6021` validated (all six gates pass), promoted by curator, public at `/tasks/is-decimal-d36f6021`.
+- Private task `is-decimal-263f95c1` returns 403 for a second anonymous user and 200 for its owner.
+- Rate limits verified: fourth pending submission by a fresh user returns 429 `rate_limited`.
+- GitHub OAuth redirect on production returns 307 to `github.com/login/oauth/authorize` with the correct callback.
+
+**Verification**
+
+- 491 unit tests: core 223, benchmarks 70, results 57, attribution 5, replay 5, harness 87, web 44.
+- `pnpm -r typecheck`, `pnpm -r lint`, `pnpm -r build` pass (build with agent env unset).
+- 5 Playwright E2E pass.
+- Deployment `https://orivoxx.vercel.app`: `/tasks`, `/tasks/new`, `/tasks/mine`, community task, real result, `/leaderboard`, `/api/v1/health` → 200; private task API → 403 for a second user.
+- Validation events: 11 stored + 6 gates visible on the task page.
+
+**Decisions / limitations**
+
+- Real task proof: all brand agents passed the curated tasks, so there is no new failing real-task attribution to prove. The existing real sandbox/model proof remains `res_64068a9c…` (harness × recovery, 49.7 → 98.3).
+- Cost is captured through OpenRouter's generation endpoint for streaming brand runs; older runs recorded before that lookup show zero.
+- Community installs are limited to runtime-dependency-free tasks. Network-dependent installs are rejected rather than executed outside the sandbox.
+- GitHub OAuth login was not completed end-to-end because no GitHub account credentials were available; the redirect and signed-session path are implemented and the curator session was exercised directly.
+- Copilot excluded after its policy error; Cursor excluded per instructions.

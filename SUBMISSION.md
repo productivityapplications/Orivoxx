@@ -17,11 +17,22 @@ Working copy for the Devpost form. Facts below are verifiable in the repository 
 
 ## Short description
 
-Orivoxx is a framework-independent benchmark for AI software-engineering agents with **six metrics, three resilience modes, and deterministic counterfactual failure attribution**. It scores the produced repository statically, then names every failure by layer × mode and proves the attribution with a replay that crosses the pass threshold. No model is in the score path or the attribution path.
+Orivoxx is a framework-independent benchmark for AI software-engineering agents with **brand-name adapters (Claude Code, Codex CLI, Aider), six metrics, real repository tasks, and deterministic counterfactual failure attribution**. It scores the produced repository statically, then names every failure by layer × mode and proves the attribution with a replay that crosses the pass threshold. No model is in the score path or the attribution path.
 
 ## The headline
 
-A trace shows what happened, not why. Orivoxx attributes a failure to one of 20 cells — five layers (spec, model, harness, tool, environment) × four modes (decision, execution, recovery, detection) — and stores a counterfactual proof: baseline 49.7 → retry at step 2 → 98.3 PASS.
+A trace shows what happened, not why. Orivoxx runs brand-name agents on real repository issues and attributes failures. Orivoxx attributes a failure to one of 20 cells — five layers (spec, model, harness, tool, environment) × four modes (decision, execution, recovery, detection) — and stores a counterfactual proof: baseline 49.7 → retry at step 2 → 98.3 PASS.
+
+## Brand agents and real tasks
+
+| Agent | OpenRouter route | Status |
+|---|---|---|
+| Claude Code 2.1.329 | Anthropic-compatible endpoint through the proxy | Runs |
+| OpenAI Codex CLI 0.171.0 | Responses wire API through the proxy | Runs |
+| Aider 0.86.2 | OpenAI-compatible proxy | Runs (baseline) |
+| GitHub Copilot CLI | no OpenRouter base-url override; org policy denied | Excluded |
+
+Six curated real-repository tasks (MIT, pinned base commits) replace synthetic specs as the public comparison set. All five recorded brand-agent runs pass their test command; Claude costs about $0.15/task and Codex about $0.06/task on the captured runs.
 
 ## What it does
 
@@ -35,6 +46,7 @@ A trace shows what happened, not why. Orivoxx attributes a failure to one of 20 
 8. **Reliability profile.** Mean ± std, pass@k, layer distribution, chaos sensitivity, trend.
 9. **Public product.** Landing, app home, catalogue, result, trace, replay, leaderboard, compare, docs.
 10. **Self-serve baseline.** Anyone can create a real result without a model call.
+11. **Community tasks.** Submit a repo issue; six mechanical gates validate it; private tasks are owner-only and promotion is curator-gated.
 
 ## Real recorded proof
 
@@ -99,6 +111,8 @@ The leaderboard aggregates stored runs by adapter + task: artifact score mean ±
 ## Built with
 
 `next.js` · `react` · `typescript` · `tailwindcss` · `zod` · `vitest` · `playwright` · `docker` · `upstash-redis` · `openrouter` · `aider` · `python` · `elevenlabs` · `ffmpeg`
+
+Community tasks are auto-validated on six mechanical gates. Promotion is curator-gated.
 
 ## Honest limitations
 

@@ -7,12 +7,13 @@ An adapter is the only place a harness choice enters a benchmark. It turns a tas
 | Adapter | Version | Kind | Model | Runtime | Network | Entry point |
 |---|---|---|---|---|---|---|
 | `fake` | 1.0.0 | baseline | `null` | In-process materialize | none | `packages/harness/src/adapters/fake.ts` |
-| `python-openrouter` | 1.0.0 | harness | `MODEL_NAME` | Python 3.12 (stdlib only) | `model-proxy` | `/opt/orivoxx/agents/python_openrouter.py` |
+| `claude-code-openrouter` | 1.0.0 | harness | `anthropic/claude-sonnet-4.5` | Claude Code 2.1.329 | `model-proxy` | `/opt/orivoxx/agents/brand_runner.py` |
+| `codex-openrouter` | 1.0.0 | harness | `openai/gpt-5.1-codex` | Codex CLI 0.171.0 | `model-proxy` | `/opt/orivoxx/agents/brand_runner.py` |
 | `aider-openrouter` | 1.0.0 | harness | `MODEL_NAME` | Aider 0.86.2 on Python 3.12 | `model-proxy` | `/opt/orivoxx/agents/aider_runner.py` |
 
 The fake adapter is the CI baseline and the self-serve public path. It never calls a model and its rows are labelled `Fake fixture (task/variant)`. The two real adapters are organizer-executed and record the model identity on every row.
 
-There is no OpenCode CLI adapter. The point of the benchmark is to compare harness configurations, so the harness is explicit: a hand-written agent loop and Aider.
+GitHub Copilot CLI is excluded: its org policy/auth does not expose an OpenRouter base URL. There is no OpenCode CLI adapter. The point of the benchmark is to compare harness configurations, so the harness is explicit: a hand-written agent loop and Aider.
 
 ## 2. Common contract
 
@@ -37,6 +38,10 @@ interface AgentAdapter {
 - `OPENAI_API_KEY` / `AIDER_OPENAI_API_KEY` may only be the literal sentinel `orivoxx-sandbox-proxy`
 
 A real adapter requires `input.network === "model-proxy"` and refuses a run bound to a different model. That is what keeps a head-to-head honest: the same slug, one varying harness.
+
+## 2b. Real repository tasks
+
+Brand adapters receive a repo cloned at a base commit on the host, an issue file at `.orivoxx/issue.md`, and a test command held outside the agent prompt. The agent runs in the cloned workspace; after exit the harness runs the test command inside the same sandbox. `taskSuccess` is test exit 0. Claude Code uses the Anthropic-compatible OpenRouter endpoint through the proxy; Codex uses the Responses wire API through the proxy. Neither receives the real provider key.
 
 ## 3. `python-openrouter`
 

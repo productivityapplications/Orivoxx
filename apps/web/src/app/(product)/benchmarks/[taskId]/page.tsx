@@ -167,8 +167,9 @@ export default async function TaskPage({
         <div className="grid gap-2 sm:grid-cols-3">
           {[
             ["fake", "Baseline", "Materializes a checked-in fixture. No model, no network."],
-            ["python-openrouter", "Organizer-run", "Standard-library Python agent loop through the model proxy."],
-            ["aider-openrouter", "Organizer-run", "Aider 0.86.2, pinned in the sandbox image."],
+            ["claude-code-openrouter", "Organizer-run", "Claude Code routed through OpenRouter via the sandbox proxy."],
+            ["codex-openrouter", "Organizer-run", "OpenAI Codex CLI routed through OpenRouter via the sandbox proxy."],
+            ["aider-openrouter", "Organizer-run", "Aider 0.86.2 pinned in the sandbox image."],
           ].map(([id, kind, body]) => (
             <div key={id} className="rounded-lg border border-border-subtle bg-panel p-3">
               <p className="font-mono text-xs text-primary">{id}</p>

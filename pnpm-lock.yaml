@@ -201,6 +201,9 @@ importers:
       '@orivoxx/results':
         specifier: workspace:*
         version: link:../results
+      '@upstash/redis':
+        specifier: ^1.41.0
+        version: 1.41.0
       zod:
         specifier: ^4.1.12
         version: 4.6.7

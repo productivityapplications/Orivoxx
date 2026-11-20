@@ -281,7 +281,8 @@ describe("adapter registry", () => {
   it("exposes the baseline and the real harness adapters", () => {
     expect(adapterSummaries().map((adapter) => adapter.id)).toEqual([
       "fake",
-      "python-openrouter",
+      "claude-code-openrouter",
+      "codex-openrouter",
       "aider-openrouter",
     ]);
     expect(getAdapter("fake").kind).toBe("baseline");

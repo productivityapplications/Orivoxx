@@ -120,22 +120,23 @@ describe("aider-openrouter adapter", () => {
 });
 
 describe("adapter registry", () => {
-  it("lists the baseline and both real harnesses", () => {
+  it("lists the baseline and brand harnesses", () => {
     const summaries = adapterSummaries();
 
     expect(summaries.map((entry) => entry.id)).toEqual([
       "fake",
-      "python-openrouter",
+      "claude-code-openrouter",
+      "codex-openrouter",
       "aider-openrouter",
     ]);
     expect(summaries[0]?.model).toBeNull();
     expect(summaries[1]?.kind).toBe("harness");
     expect(summaries[2]?.kind).toBe("harness");
-    expect(listAdapters()).toHaveLength(3);
+    expect(listAdapters()).toHaveLength(4);
   });
 
   it("resolves an adapter by id and rejects an unknown one", () => {
-    expect(getAdapter("python-openrouter").id).toBe("python-openrouter");
+    expect(getAdapter("claude-code-openrouter").id).toBe("claude-code-openrouter");
     expect(() => getAdapter("opencode")).toThrow(/Unknown adapter/);
   });
 

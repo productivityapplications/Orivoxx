@@ -78,7 +78,7 @@ export default async function AppHomePage() {
         <dl className="grid grid-cols-2 gap-2 self-end">
           {[
             ["Tasks", String(tasks.length)],
-            ["Adapters", "3"],
+            ["Adapters", "4"],
             ["Results", String(board.entries.length)],
             ["Attributed", String(attributed.length)],
             ["Pass rate", `${Math.round((passing.length / Math.max(1, board.entries.length)) * 100)}%`],
@@ -254,6 +254,20 @@ export default async function AppHomePage() {
           <p className="text-muted">retry_policy@2 → 98.3 · PASS</p>
           <p className="mt-3"><span className="text-accent">$</span> orivoxx diff --a res_64068a --b res_df4fc5</p>
           <p className="text-muted">+48.6 score · -20% tool errors</p>
+        </div>
+      </section>
+
+      {/* Your tasks */}
+      <section className="rounded-xl border border-border-subtle bg-panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">\ YOUR TASKS \</p>
+            <p className="mt-1 text-sm text-primary">Submit a repo issue or review your validations.</p>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/tasks/mine" className="rounded-full border border-border-subtle px-3 py-1.5 text-xs text-secondary">Your tasks</Link>
+            <Link href="/tasks/new" className="rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-app">Submit</Link>
+          </div>
         </div>
       </section>
 
