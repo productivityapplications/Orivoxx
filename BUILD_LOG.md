@@ -688,3 +688,14 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - 495 unit tests: core 223, benchmarks 71, results 57, attribution 5, replay 5, harness 88, web 46.
 - Live catalogue verified after the final deploy: `/api/v1/tasks` returns `real:is-email-predicate`, `real:itsdangerous-future-signature`, `real:slugify-max-length`; `/`, `/app`, `/tasks`, `/benchmarks`, and `/leaderboard` each contain all three.
 - Final video re-rendered after the quick-start copy was aligned to `0.0 → 100.0`: 134.7s, −16.2 LUFS, −1.6 dBTP, 0 caption overlaps.
+
+## 2026-11-21 — Cinematic promo rebuild
+
+- Added the hidden `/promo` route (`apps/web/src/app/promo/page.tsx`) with `framer-motion`, Instrument Serif headings, Geist body, the Coderia palette, a slow green orb, and a browser mockup.
+- Recorded five raw UI clips into `demo/recordings/raw-01.webm` … `raw-05.webm` and served trimmed copies from `apps/web/public/demo/`.
+- Generated all eight scenes with ElevenLabs **Adam** (`pNInz6obpgDQGcFmaJgB`, premade). Single-scene test returned HTTP 200. Built one `promo-audio.mp3` with a 1.7s intro silence, per-scene gaps, and a 1.2s tail; wrote the shared `timeline.json`.
+- Recorded `/promo` in one Playwright take at 1920×1080. The scene clock uses **wall time**, not `audio.currentTime`; headless audio playback drifts, so the wall-clock timeline keeps the visual cuts aligned with the separately muxed narration.
+- Trimmed the recording at the click (`-ss 4.55`), muxed with the promo narration and a low ambient bed, normalized to −16.3 LUFS / −1.5 dBTP.
+- Final: `demo/orivoxx-demo.mp4`, 130.1s (2:10.1), H.264/AAC 1920×1080/30, 12.1 MB.
+- Removed the old pipeline scripts (`assemble.mjs`, `record-scenes.mjs`, `generate-audio.mjs`, `generate-piper-audio.mjs`) and old scene recordings.
+- Updated `demo/README.md`, `demo/SCRIPT.md`, thumbnails, and `SUBMISSION.md`.

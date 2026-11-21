@@ -1,0 +1,64 @@
+{
+  "introSeconds": 1.7,
+  "gapSeconds": 0.35,
+  "tailSeconds": 1.2,
+  "totalSeconds": 130.085,
+  "scenes": [
+    {
+      "id": "01",
+      "title": "The problem",
+      "file": "scene-01.mp3",
+      "start": 1.7,
+      "duration": 14.393
+    },
+    {
+      "id": "02",
+      "title": "The solution",
+      "file": "scene-02.mp3",
+      "start": 16.443,
+      "duration": 14.054
+    },
+    {
+      "id": "03",
+      "title": "What it measures",
+      "file": "scene-03.mp3",
+      "start": 30.847,
+      "duration": 19.122
+    },
+    {
+      "id": "04",
+      "title": "A real run",
+      "file": "scene-04.mp3",
+      "start": 50.319,
+      "duration": 16.144
+    },
+    {
+      "id": "05",
+      "title": "Attribution",
+      "file": "scene-05.mp3",
+      "start": 66.813,
+      "duration": 15.882
+    },
+    {
+      "id": "06",
+      "title": "Replay proof",
+      "file": "scene-06.mp3",
+      "start": 83.045,
+      "duration": 14.472
+    },
+    {
+      "id": "07",
+      "title": "Community tasks",
+      "file": "scene-07.mp3",
+      "start": 97.867,
+      "duration": 17.998
+    },
+    {
+      "id": "08",
+      "title": "Close",
+      "file": "scene-08.mp3",
+      "start": 116.215,
+      "duration": 12.669
+    }
+  ]
+}
