@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Orivoxx — HackCulture AI Global Hackathon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0B0B09;
+    --text: #E1E1DB;
+    --muted: #8C8C85;
+    --faint: #5C5C57;
+    --accent: #17CF97;
+    --panel: #121210;
+    --panel-2: #171714;
+    --border: #2A2A26;
+    --border-strong: #3A3A34;
+    --serif: "Instrument Serif", Georgia, serif;
+    --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+    --mono: "Geist", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--sans); }
+  @page { size: 1280px 720px; margin: 0; }
+  .slide {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    page-break-after: always;
+    background: var(--bg);
+    padding: 54px 64px 58px;
+  }
+  .slide:last-child { page-break-after: auto; }
+  .orb {
+    position: absolute; pointer-events: none; border-radius: 999px;
+    background: radial-gradient(circle, rgba(23,207,151,.22) 0%, rgba(23,207,151,.06) 38%, rgba(11,11,9,0) 70%);
+    filter: blur(8px);
+  }
+  .orb.a { width: 620px; height: 620px; right: -170px; top: -260px; }
+  .orb.b { width: 420px; height: 420px; left: -200px; bottom: -220px; opacity: .55; }
+  .grid {
+    position: absolute; inset: 0; pointer-events: none; opacity: .10;
+    background-image: linear-gradient(rgba(225,225,219,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(225,225,219,.08) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(circle at 50% 40%, black 0%, transparent 78%);
+  }
+  .top {
+    position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .28em; text-transform: uppercase; color: var(--muted);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); letter-spacing: .32em; }
+  .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--accent); box-shadow: 0 0 18px rgba(23,207,151,.9); }
+  .footer {
+    position: absolute; left: 64px; right: 64px; bottom: 26px; z-index: 2;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--faint);
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .30em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 400; font-size: 62px; line-height: .98;
+    letter-spacing: -.035em; margin: 0; color: var(--text);
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: 34px; line-height: 1.02; letter-spacing: -.025em; margin: 0; }
+  p { margin: 0; }
+  .body { font-size: 15px; line-height: 1.7; color: var(--muted); }
+  .mono { font-family: var(--mono); }
+  .accent { color: var(--accent); }
+  .rule { height: 1px; background: var(--border); width: 100%; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 12px; font-family: var(--mono); font-size: 9px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--muted);
+  }
+  .chip .dot { width: 5px; height: 5px; box-shadow: none; }
+  .card { border: 1px solid var(--border); border-radius: 16px; background: var(--panel); }
+  .num { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; color: var(--accent); }
+
+  /* 1 — title */
+  .title-grid { position: relative; z-index: 2; display: grid; grid-template-columns: 1.12fr .88fr; gap: 52px; align-items: center; height: 548px; }
+  .title h1 { font-size: 78px; }
+  .title .sub { margin-top: 22px; max-width: 540px; font-size: 16px; line-height: 1.7; color: var(--muted); }
+  .title .meta { margin-top: 26px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .proof-card {
+    position: relative; border: 1px solid var(--border); border-radius: 22px; padding: 24px;
+    background: linear-gradient(160deg, rgba(23,207,151,.10), rgba(18,18,16,.96) 38%);
+    box-shadow: 0 40px 100px rgba(0,0,0,.5);
+  }
+  .proof-head { display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .proof-value { display: flex; align-items: baseline; gap: 16px; margin-top: 22px; }
+  .proof-value .big { font-family: var(--mono); font-size: 74px; line-height: .9; letter-spacing: -.06em; color: var(--text); }
+  .proof-value .arrow { color: var(--accent); font-family: var(--mono); font-size: 28px; }
+  .proof-value .green { color: var(--accent); }
+  .proof-bar { margin-top: 22px; height: 7px; border-radius: 99px; background: #242422; overflow: hidden; }
+  .proof-bar span { display: block; height: 100%; width: 100%; background: var(--accent); border-radius: 99px; }
+  .proof-row { margin-top: 18px; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .proof-tag { display: inline-block; margin-top: 18px; border: 1px solid rgba(23,207,151,.4); background: rgba(23,207,151,.09); color: var(--accent); border-radius: 8px; padding: 8px 10px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; }
+  .browser { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: #0d0d0c; }
+  .browser-bar { height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: #151513; border-bottom: 1px solid var(--border); }
+  .browser-bar i { width: 7px; height: 7px; border-radius: 99px; display: inline-block; }
+  .browser-bar .url { margin-left: 8px; flex: 1; font-family: var(--mono); font-size: 8px; color: var(--faint); background: #0b0b0a; border: 1px solid var(--border); border-radius: 5px; padding: 4px 7px; }
+  .browser-body { padding: 14px; }
+  .mini-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #20201d; font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  .mini-row:last-child { border-bottom: 0; }
+  .mini-row b { color: var(--text); font-weight: 500; }
+  .mini-badge { color: var(--accent); }
+
+  /* 2 — problem */
+  .split { position: relative; z-index: 2; display: grid; grid-template-columns: 1.15fr .85fr; gap: 44px; margin-top: 28px; }
+  .problem h1 { font-size: 60px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 32px; }
+  .stat { padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); }
+  .stat .v { font-family: var(--mono); font-size: 30px; color: var(--text); letter-spacing: -.04em; }
+  .stat .l { margin-top: 4px; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .trace { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: #0d0d0c; }
+  .trace-title { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .trace-row { display: grid; grid-template-columns: 22px 84px 1fr 70px; gap: 8px; padding: 8px 0; border-bottom: 1px solid #1d1d1a; font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  .trace-row:last-child { border-bottom: 0; }
+  .trace-row .idx { color: var(--faint); }
+  .trace-row .tool { color: var(--text); }
+  .trace-row .err { color: #ff7b72; }
+  .trace-row.hot { background: rgba(255,95,87,.07); border: 1px solid rgba(255,95,87,.22); border-radius: 8px; padding: 8px; margin: 2px -8px; }
+  .suspects { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .suspect { border: 1px dashed var(--border-strong); border-radius: 999px; padding: 6px 9px; font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  .suspect.hot { border-color: rgba(23,207,151,.5); color: var(--accent); }
+
+  /* 3 — solution */
+  .solution h1 { font-size: 58px; margin-top: 2px; }
+  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 28px; }
+  .pillar { padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); }
+  .pillar h3 { margin: 14px 0 8px; font-family: var(--serif); font-weight: 400; font-size: 25px; letter-spacing: -.02em; }
+  .pillar p { font-size: 12px; line-height: 1.6; color: var(--muted); }
+  .solution-bottom { display: grid; grid-template-columns: 1.2fr .8fr; gap: 12px; margin-top: 12px; }
+  .quote-card { padding: 20px; border: 1px solid rgba(23,207,151,.32); border-radius: 16px; background: linear-gradient(120deg, rgba(23,207,151,.10), rgba(18,18,16,.96)); }
+  .quote-card .q { font-family: var(--serif); font-size: 34px; line-height: 1.05; letter-spacing: -.02em; }
+  .quote-card .q em { color: var(--accent); font-style: italic; }
+  .mini-proof { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: #0e0e0c; }
+  .mini-proof .line { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 9px; color: var(--muted); padding: 6px 0; }
+  .mini-proof .line b { color: var(--text); font-weight: 500; }
+  .mini-proof .score { font-family: var(--mono); font-size: 35px; letter-spacing: -.05em; color: var(--accent); margin: 4px 0 2px; }
+
+  /* 4 — agents/tasks */
+  .agents h1 { font-size: 50px; }
+  .agents-grid { display: grid; grid-template-columns: .76fr 1.24fr; gap: 22px; margin-top: 24px; }
+  .agent-stack { display: flex; flex-direction: column; gap: 9px; }
+  .agent { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 13px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+  .agent .name { font-size: 13px; color: var(--text); }
+  .agent .sub { margin-top: 2px; font-family: var(--mono); font-size: 8px; color: var(--faint); letter-spacing: .06em; }
+  .agent .status { font-family: var(--mono); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(23,207,151,.3); border-radius: 999px; padding: 5px 7px; }
+  .task-table { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--panel); }
+  .task-row { display: grid; grid-template-columns: 1.15fr .52fr .52fr; gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid #20201d; }
+  .task-row:last-child { border-bottom: 0; }
+  .task-row.head { background: #151513; font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .task-row .id { font-family: var(--mono); font-size: 10px; color: var(--text); }
+  .task-row .repo { margin-top: 3px; font-family: var(--mono); font-size: 8px; color: var(--faint); }
+  .task-row .lic { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  .task-row .test { font-family: var(--mono); font-size: 8px; color: var(--muted); }
+  .result-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  .result { padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: #0e0e0c; }
+  .result .topline { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 8px; color: var(--faint); }
+  .result .score { font-family: var(--mono); font-size: 22px; color: var(--accent); letter-spacing: -.04em; margin-top: 2px; }
+  .result .note { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+  /* 5 — taxonomy */
+  .tax h1 { font-size: 50px; }
+  .tax-table { margin-top: 22px; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .tax-head, .tax-row { display: grid; grid-template-columns: 150px repeat(4, 1fr); }
+  .tax-head > div { padding: 9px 12px; background: #151513; font-family: var(--mono); font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); border-bottom: 1px solid var(--border); }
+  .tax-row > div { padding: 10px 12px; border-bottom: 1px solid #20201d; font-size: 10px; line-height: 1.35; color: var(--muted); }
+  .tax-row:last-child > div { border-bottom: 0; }
+  .tax-row .layer { font-family: var(--mono); font-size: 10px; color: var(--text); text-transform: uppercase; letter-spacing: .08em; }
+  .tax-row .layer small { display: block; margin-top: 3px; font-size: 8px; letter-spacing: .02em; text-transform: none; color: var(--faint); }
+  .tax-row .proven { background: rgba(23,207,151,.10); color: var(--text); border-left: 2px solid var(--accent); }
+  .tax-row .proven b { color: var(--accent); font-weight: 500; }
+  .tax-note { display: flex; justify-content: space-between; margin-top: 12px; font-family: var(--mono); font-size: 8px; letter-spacing: .06em; color: var(--faint); }
+  .tax-note b { color: var(--accent); font-weight: 500; }
+
+  /* 6 — architecture */
+  .arch h1 { font-size: 50px; }
+  .arch-flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 30px; align-items: stretch; }
+  .node { position: relative; padding: 16px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); min-height: 130px; }
+  .node.accent-node { border-color: rgba(23,207,151,.36); background: linear-gradient(150deg, rgba(23,207,151,.09), var(--panel)); }
+  .node .k { font-family: var(--mono); font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+  .node h3 { margin: 10px 0 6px; font-family: var(--serif); font-weight: 400; font-size: 21px; letter-spacing: -.02em; }
+  .node p { font-size: 10px; line-height: 1.5; color: var(--muted); }
+  .node .arrow { position: absolute; right: -12px; top: 50%; transform: translateY(-50%); z-index: 3; color: var(--accent); font-family: var(--mono); font-size: 14px; }
+  .arch-notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+  .arch-note { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: #0e0e0c; }
+  .arch-note .k { font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+  .arch-note p { margin-top: 5px; font-size: 10px; line-height: 1.5; color: var(--muted); }
+
+  /* 7 — demo */
+  .demo-grid { position: relative; z-index: 2; display: grid; grid-template-columns: 1.05fr .95fr; gap: 42px; align-items: center; height: 520px; margin-top: 32px; }
+  .demo h1 { font-size: 64px; }
+  .demo .url { margin-top: 26px; font-family: var(--mono); font-size: 19px; color: var(--accent); letter-spacing: -.02em; }
+  .demo .links { margin-top: 26px; display: flex; flex-direction: column; gap: 9px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .demo .links b { color: var(--text); font-weight: 500; }
+  .demo-card { padding: 20px; border-radius: 20px; border: 1px solid rgba(23,207,151,.28); background: linear-gradient(150deg, rgba(23,207,151,.10), rgba(18,18,16,.97)); }
+  .demo-card .stat { display: flex; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid #232320; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .demo-card .stat:last-child { border-bottom: 0; }
+  .demo-card .stat b { color: var(--text); font-weight: 500; }
+  .demo-card .big-score { font-family: var(--mono); font-size: 54px; letter-spacing: -.06em; color: var(--accent); margin: 8px 0 2px; }
+  .closing-line { margin-top: 24px; font-family: var(--serif); font-size: 24px; color: var(--text); letter-spacing: -.01em; }
+  .closing-line em { color: var(--accent); font-style: italic; }
+
+  .small { font-size: 11px; line-height: 1.6; color: var(--muted); }
+  .kicker { font-family: var(--mono); font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--faint); }
+</style>
+</head>
+<body>
+
+<!-- 1 Title -->
+<section class="slide">
+  <div class="orb a"></div><div class="orb b"></div><div class="grid"></div>
+  <div class="top"><div class="brand"><span class="dot"></span>ORIVOXX</div><div>HackCulture AI Global Hackathon · 2026</div></div>
+  <div class="title-grid">
+    <div class="title">
+      <p class="eyebrow">Benchmarking track · Final submission</p>
+      <h1>Benchmark the agent,<br><em>not just the model.</em></h1>
+      <p class="sub">A benchmark and failure-attribution platform for AI software-engineering agents. Real repositories, isolated Docker runs, deterministic scores, and a replay that proves the diagnosis.</p>
+      <div class="meta">
+        <span class="chip"><span class="dot"></span>5 layers × 4 modes</span>
+        <span class="chip"><span class="dot"></span>no LLM in the score</span>
+        <span class="chip"><span class="dot"></span>open source</span>
+      </div>
+    </div>
+    <div class="proof-card">
+      <div class="proof-head"><span>Stored proof · res_c1ba8d7b</span><span class="mono accent">PASS</span></div>
+      <div class="browser" style="margin-top:16px">
+        <div class="browser-bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span class="url">orivoxx.vercel.app/replay/res_c1ba8d7b</span></div>
+        <div class="browser-body">
+          <div class="mini-row"><span>attribution</span><b class="accent">harness × recovery</b></div>
+          <div class="mini-row"><span>rule</span><b>patch_apply_failed_unhandled</b></div>
+          <div class="mini-row"><span>intervention</span><b>retry_policy @ step 2</b></div>
+          <div class="mini-row"><span>real test</span><b class="accent">exit 0 · PASS</b></div>
+        </div>
+      </div>
+      <div class="proof-value"><span class="big">0.0</span><span class="arrow">→</span><span class="big green">100.0</span></div>
+      <div class="proof-bar"><span></span></div>
+      <div class="proof-row"><span>baseline · test failed</span><span>counterfactual · 3 steps replayed</span></div>
+      <div class="proof-tag">We tell you it’s the harness. Then we prove it.</div>
+    </div>
+  </div>
+  <div class="footer"><span>Orivoxx · Benchmark the agent, not just the model.</span><span>01 / 07</span></div>
+</section>
+
+<!-- 2 Problem -->
+<section class="slide problem">
+  <div class="orb a"></div><div class="grid"></div>
+  <div class="top"><div class="brand"><span class="dot"></span>ORIVOXX</div><div>01 · The problem</div></div>
+  <div class="split">
+    <div>
+      <p class="eyebrow">The observability gap</p>
+      <h1>A trace tells you<br><em>what</em> happened.<br>Not <em>why</em> it failed.</h1>
+      <p class="body" style="margin-top:18px; max-width:540px">Developers stare at dozens of hand-offs and guess the broken layer. The model? The harness? A tool? The specification? Every guess costs another full run.</p>
+      <div class="stat-grid">
+        <div class="stat"><div class="v">47</div><div class="l">steps in one trace</div></div>
+        <div class="stat"><div class="v">1</div><div class="l">failed artifact</div></div>
+        <div class="stat"><div class="v">5</div><div class="l">possible layers</div></div>
+      </div>
+      <div class="suspects">
+        <span class="suspect">spec</span><span class="suspect">model</span><span class="suspect">harness</span><span class="suspect">tool</span><span class="suspect">environment</span>
+        <span class="suspect hot">which one?</span>
+      </div>
+    </div>
+    <div>
+      <div class="trace">
+        <div class="trace-title"><span>run trace · bounded</span><span>exit failed</span></div>
+        <div class="trace-row"><span class="idx">01</span><span class="tool">run_started</span><span>python-openrouter · 1.0.0</span><span>—</span></div>
+        <div class="trace-row"><span class="idx">02</span><span class="tool">model_call</span><span>plan the change</span><span>ok</span></div>
+        <div class="trace-row"><span class="idx">04</span><span class="tool">read_file</span><span>src/itsdangerous/timed.py</span><span>ok</span></div>
+        <div class="trace-row"><span class="idx">07</span><span class="tool">apply_patch</span><span>3 files · one tool call</span><span class="err">EIO</span></div>
+        <div class="trace-row hot"><span class="idx">07</span><span class="tool">apply_patch</span><span class="err">tool error · no retry</span><span class="err">FAIL</span></div>
+        <div class="trace-row"><span class="idx">09</span><span class="tool">test</span><span>pytest .orivoxx/run_pytest.py</span><span class="err">exit 2</span></div>
+      </div>
+      <p class="small" style="margin-top:14px">A trace shows the hand-off. It does not name the responsible layer, the rule that was violated, or the intervention that would have saved the run.</p>
+      <div class="card" style="margin-top:14px; padding:14px 16px; border-color:rgba(255,95,87,.28); background:rgba(255,95,87,.05)">
+        <p class="kicker" style="color:#ff7b72">the expensive question</p>
+        <p style="font-family:var(--serif); font-size:22px; line-height:1.1; margin-top:5px">“Was it the model — or the harness that refused to retry?”</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Orivoxx · deterministic attribution</span><span>02 / 07</span></div>
+</section>
+
+<!-- 3 Solution -->
+<section class="slide solution">
+  <div class="orb a"></div><div class="orb b"></div><div class="grid"></div>
+  <div class="top"><div class="brand"><span class="dot"></span>ORIVOXX</div><div>02 · The solution</div></div>
+  <p class="eyebrow" style="margin-top:20px">One pipeline · three guarantees</p>
+  <h1>Benchmark. Attribute. <em>Prove.</em></h1>
+  <div class="pillars">
+    <div class="pillar">
+      <div class="num">01 · Benchmark</div>
+      <h3>Real tasks, real tests.</h3>
+      <p>A pinned GitHub issue, a base commit, and one hidden test command. The agent runs in Docker; the test runs in the same sandbox. Primary success is exit 0.</p>
+    </div>
+    <div class="pillar">
+      <div class="num">02 · Attribute</div>
+      <h3>20 cells. 17 rules.</h3>
+      <p>Every failure maps to a layer × mode cell using trace evidence. No guessed root cause, no model in the attribution path.</p>
+    </div>
+    <div class="pillar">
+      <div class="num">03 · Prove</div>
+      <h3>A counterfactual replay.</h3>
+      <p>Reconstruct the workspace, apply the intercepted action, reinstall dependencies, and re-run the real test. The diagnosis is only as good as the proof.</p>
+    </div>
+  </div>
+  <div class="solution-bottom">
+    <div class="quote-card">
+      <p class="kicker">the result</p>
+      <p class="q">“The attribution says <em>harness × recovery</em>. The replay takes the run from 0.0 to 100.0 — on the real test command.”</p>
+      <p class="small" style="margin-top:10px">No model call enters the replay. The scoring engine never executes produced code.</p>
+    </div>
+    <div class="mini-proof">
+      <div class="line"><span>result</span><b>res_c1ba8d7b</b></div>
+      <div class="line"><span>rule</span><b>patch_apply_failed_unhandled</b></div>
+      <div class="line"><span>intervention</span><b>retry @ step 2</b></div>
+      <div class="score">100.0</div>
+      <div class="line"><span>baseline 0.0 → proof PASS</span><b class="accent">3 steps</b></div>
+    </div>
+  </div>
+  <div class="footer"><span>Orivoxx · benchmark + deterministic attribution + replay</span><span>03 / 07</span></div>
+</section>
+
+<!-- 4 Real agents/tasks -->
+<section class="slide agents">
+  <div class="orb a"></div><div class="grid"></div>
+  <div class="top"><div class="brand"><span class="dot"></span>ORIVOXX</div><div>03 · Real agents, real tasks</div></div>
+  <p class="eyebrow" style="margin-top:18px">The comparison set</p>
+  <h1>Brand-name agents.<br>Real repositories. <em>Hidden tests.</em></h1>
+  <div class="agents-grid">
+    <div>
+      <div class="agent-stack">
+        <div class="agent"><div><div class="name">Claude Code 2.1.329</div><div class="sub">anthropic/claude-sonnet-4.5 · OpenRouter</div></div><div class="status">Runs</div></div>
+        <div class="agent"><div><div class="name">OpenAI Codex CLI 0.171.0</div><div class="sub">openai/gpt-5.1-codex · Responses API</div></div><div class="status">Runs</div></div>
+        <div class="agent"><div><div class="name">Aider 0.86.2</div><div class="sub">openai-compatible · baseline</div></div><div class="status">Baseline</div></div>
+      </div>
+      <p class="small" style="margin-top:10px">All model traffic passes through one allowlisted proxy. The real provider key never enters the sandbox. Copilot and Cursor are excluded: they cannot be reliably headless-routed through OpenRouter.</p>
+      <div class="result-strip">
+        <div class="result"><div class="topline"><span>Claude Code</span><span>PASS</span></div><div class="score">100.0</div><div class="note">slugify · $0.9044</div></div>
+        <div class="result"><div class="topline"><span>Python + GPT-5.1</span><span>PASS</span></div><div class="score">100.0</div><div class="note">community · $0.0068</div></div>
+        <div class="result"><div class="topline"><span>Codex CLI</span><span>FAIL</span></div><div class="score" style="color:#ff7b72">0.0</div><div class="note">model × decision</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="task-table">
+        <div class="task-row head"><span>Task</span><span>License</span><span>Test</span></div>
+        <div class="task-row"><div><div class="id">slugify-max-length</div><div class="repo">sindresorhus/slugify @ 99b35c2b</div></div><div class="lic">MIT</div><div class="test">node --test</div></div>
+        <div class="task-row"><div><div class="id">is-email-predicate</div><div class="repo">sindresorhus/is @ e9c026c6</div></div><div class="lic">MIT</div><div class="test">node --test (TS)</div></div>
+        <div class="task-row"><div><div class="id">itsdangerous-future-signature</div><div class="repo">pallets/itsdangerous @ 672971d6</div></div><div class="lic">BSD-3</div><div class="test">pytest (real cmd)</div></div>
+      </div>
+      <div class="card" style="margin-top:12px; padding:14px 16px; border-color:rgba(23,207,151,.25); background:rgba(23,207,151,.05)">
+        <p class="kicker accent">same sandbox · same tests · same rules</p>
+        <p class="small" style="margin-top:5px; color:var(--text)">Acceptance fixtures live under <span class="mono">.orivoxx/</span> and are rewritten after the agent exits. An agent cannot weaken the test.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Orivoxx · Claude Code · Codex CLI · Aider</span><span>04 / 07</span></div>
+</section>
+
+<!-- 5 Taxonomy -->
+<section class="slide tax">
+  <div class="orb a"></div><div class="grid"></div>
+  <div class="top"><div class="brand"><span class="dot"></span>ORIVOXX</div><div>04 · Attribution taxonomy</div></div>
+  <p class="eyebrow" style="margin-top:18px">5 layers × 4 modes</p>
+  <h1>Twenty cells. <em>One evidence-backed diagnosis.</em></h1>
+  <div class="tax-table">
+    <div class="tax-head"><div>Layer</div><div>Decision</div><div>Execution</div><div>Recovery</div><div>Detection</div></div>
+    <div class="tax-row"><div class="layer">Spec<small>missing or contradictory requirement</small></div><div>wrong requirement followed</div><div>spec not materialized</div><div>—</div><div>contradiction ignored</div></div>
+    <div class="tax-row"><div class="layer">Model<small>reasoning and tool choice</small></div><div>test failed after patch</div><div>hallucinated API</div><div>gave up after error</div><div>ignored evidence</div></div>
+    <div class="tax-row"><div class="layer">Harness<small>orchestration and recovery</small></div><div>bad stop policy</div><div>test_run_skipped · no result</div><div class="proven"><b>patch_apply_failed_unhandled</b><br>proven 0.0 → 100.0</div><div>dropped result</div></div>
+    <div class="tax-row"><div class="layer">Tool<small>tool results and faults</small></div><div>wrong tool selected</div><div>tool_error_unhandled · EACCES</div><div>retried then gave up</div><div>garbage accepted</div></div>
+    <div class="tax-row"><div class="layer">Environment<small>provider and infrastructure</small></div><div>invalid model choice</div><div>test_timeout · budget exceeded</div><div>external outage</div><div>flakiness unnoticed</div></div>
+  </div>
+  <div class="tax-note"><span>Highlighted cells are proven by a real sandbox run and a counterfactual replay.</span><b>17 deterministic rules · no LLM in the attribution path</b></div>
+  <div class="footer"><span>Orivoxx · layer × mode · evidence required</span><span>05 / 07</span></div>
+</section>
+
+<!-- 6 Architecture -->
+<section class="slide arch">
+  <div class="orb a"></div><div class="orb b"></div><div class="grid"></div>
+  <div class="top"><div class="brand"><span class="dot"></span>ORIVOXX</div><div>05 · Architecture</div></div>
+  <p class="eyebrow" style="margin-top:18px">One boundary between measurement and execution</p>
+  <h1>Public product. <em>Private sandbox.</em></h1>
+  <div class="arch-flow">
+    <div class="node"><div class="k">01 · client</div><h3>Browser</h3><p>Dark-first Next.js App Router. Task catalogue, result explorer, attribution, replay.</p><span class="arrow">→</span></div>
+    <div class="node accent-node"><div class="k">02 · edge</div><h3>Vercel</h3><p>Read APIs, leaderboard, community submissions, rate limits, origin checks, operator kill switch.</p><span class="arrow">→</span></div>
+    <div class="node"><div class="k">03 · store</div><h3>Upstash</h3><p>Immutable scorecards, traces, proofs, task queue, validation events, rate counters.</p><span class="arrow">→</span></div>
+    <div class="node"><div class="k">04 · runner</div><h3>VPS runner</h3><p>Organizer-executed jobs. Clone on host, then hand the bounded workspace to Docker.</p><span class="arrow">→</span></div>
+    <div class="node accent-node"><div class="k">05 · execution</div><h3>Docker sandbox</h3><p>Non-root, read-only rootfs, tmpfs, quotas, no platform secrets, allowlisted proxy.</p></div>
+  </div>
+  <div class="arch-notes">
+    <div class="arch-note"><div class="k">score path</div><p>Static only. The scoring engine never runs produced code, tests, builds, or package installs. A test proves the import graph contains no provider or adapter module.</p></div>
+    <div class="arch-note"><div class="k">execution path</div><p>Only <span class="mono">packages/harness</span> launches agent processes, and only through the Docker executor. The test command runs inside the sandbox.</p></div>
+    <div class="arch-note"><div class="k">proof path</div><p>Replay reconstructs the workspace, applies the recorded action, reinstalls declared dependencies, and re-runs the real test. No model call.</p></div>
+  </div>
+  <div class="footer"><span>Orivoxx · browser → Vercel → Upstash → runner → Docker</span><span>06 / 07</span></div>
+</section>
+
+<!-- 7 Demo -->
+<section class="slide demo">
+  <div class="orb a"></div><div class="orb b"></div><div class="grid"></div>
+  <div class="top"><div class="brand"><span class="dot"></span>ORIVOXX</div><div>06 · The demo</div></div>
+  <div class="demo-grid">
+    <div>
+      <p class="eyebrow">See the proof, not a promise</p>
+      <h1>Run it. Attribute it.<br><em>Replay it.</em></h1>
+      <p class="body" style="margin-top:18px; max-width:500px">The live app ships with the real tasks, the stored runs, the attribution cards, and the counterfactual proof. The 2:10 demo walks through the complete story.</p>
+      <p class="url">orivoxx.vercel.app</p>
+      <div class="links">
+        <span><b>Demo film</b> · demo/orivoxx-demo.mp4</span>
+        <span><b>Proof</b> · /replay/res_c1ba8d7b</span>
+        <span><b>Source</b> · github.com/productivityapplications/Orivoxx</span>
+      </div>
+      <p class="closing-line">Benchmark the agent, <em>not just the model.</em></p>
+    </div>
+    <div class="demo-card">
+      <div class="topline" style="display:flex; justify-content:space-between; font-family:var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)"><span>stored result</span><span class="accent">PASS</span></div>
+      <div class="big-score">0.0 → 100.0</div>
+      <div class="stat"><span>task</span><b>itsdangerous-future-signature</b></div>
+      <div class="stat"><span>layer × mode</span><b class="accent">harness × recovery</b></div>
+      <div class="stat"><span>rule</span><b>patch_apply_failed_unhandled</b></div>
+      <div class="stat"><span>intervention</span><b>retry at step 2</b></div>
+      <div class="stat"><span>real test</span><b class="accent">exit 0 · 3 replayed steps</b></div>
+      <div class="stat"><span>score path</span><b>deterministic · no LLM</b></div>
+      <p class="small" style="margin-top:12px">“We tell you it’s the harness — and we prove it.”</p>
+    </div>
+  </div>
+  <div class="footer"><span>Orivoxx · HackCulture AI Global Hackathon · 2026</span><span>07 / 07</span></div>
+</section>
+
+</body>
+</html>

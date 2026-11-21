@@ -699,3 +699,10 @@ Running log for the autonomous build. Newest entries at the bottom. This is a re
 - Final: `demo/orivoxx-demo.mp4`, 130.1s (2:10.1), H.264/AAC 1920×1080/30, 12.1 MB.
 - Removed the old pipeline scripts (`assemble.mjs`, `record-scenes.mjs`, `generate-audio.mjs`, `generate-piper-audio.mjs`) and old scene recordings.
 - Updated `demo/README.md`, `demo/SCRIPT.md`, thumbnails, and `SUBMISSION.md`.
+
+## 2026-11-21 — HackCulture pitch deck
+
+- Added `pitch/deck.html`, a 7-slide 16:9 deck using the Coderia palette and Instrument Serif/Geist.
+- Added `pitch/render.mjs` (Playwright) and rendered `pitch/Orivoxx_Deck.pdf`: 7 pages, 960 × 540 pt (13.333 × 7.5 in), 2.3 MB.
+- Slides: title; the observability gap; benchmark/attribute/prove; real agents and real repos; the 5 × 4 taxonomy; browser → Vercel → Upstash → runner → Docker; live demo/proof.
+- Only the proven `harness × recovery` cell is highlighted; the other taxonomy rules are listed without a proof claim.
