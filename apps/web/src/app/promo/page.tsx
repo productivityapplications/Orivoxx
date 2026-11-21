@@ -158,10 +158,8 @@ function Typewriter({ text, active }: { text: string; active: boolean }) {
 
   useEffect(() => {
     if (!active) {
-      setLength(0);
       return;
     }
-    setLength(0);
     const timer = setInterval(() => {
       setLength((value) => {
         if (value >= text.length) {
@@ -279,7 +277,6 @@ export default function PromoPage() {
 
   useEffect(() => {
     if (active !== "06") {
-      setScore(0);
       return;
     }
     const start = performance.now();
